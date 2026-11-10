@@ -14,8 +14,18 @@ jobs:
   android:
     name: Android unit tests and debug build
     runs-on: ubuntu-22.04
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
+      - name: Enable KVM for Android emulator
+        run: |
+          if [[ ! -e /dev/kvm ]]; then
+            echo "/dev/kvm is unavailable on this runner" >&2
+            exit 1
+          fi
+          sudo chmod 666 /dev/kvm
+          test -r /dev/kvm && test -w /dev/kvm
+          ls -l /dev/kvm
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -73,6 +83,7 @@ jobs:
           path: app/build/outputs/apk/androidTest/debug/*.apk
           if-no-files-found: warn
       - name: Run Room migration and database instrumentation tests
+        timeout-minutes: 40
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 29
@@ -93,6 +104,7 @@ jobs:
   ai-gateway:
     name: AI gateway tests and static checks
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
