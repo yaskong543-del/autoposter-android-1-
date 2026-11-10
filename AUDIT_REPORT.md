@@ -66,3 +66,16 @@ The available environment has Java 21 and Node 22.16, but the Android project ta
 6. Obtain the required YouTube, Meta/Instagram/Facebook, and TikTok platform approvals before representing publishing as production-ready.
 
 **Android Kotlin unit tests and both APK compilation tasks are now verified successful. Room migration instrumentation, Supabase deployment/live AI, and physical-device installation remain unverified.**
+
+
+---
+
+## Latest CI evidence — 2026-11-10 (authoritative update)
+
+Run [42778490167](https://github.com/yaskong543-del/autoposter-android-1-/actions/runs/42778490167) passed these steps: v0.6 Room schema v1 generation, Kotlin unit tests, debug APK assembly, instrumentation APK assembly, APK/schema artifact uploads, AI gateway tests, migration static check, and provider-secret scan. The downloaded Room schema artifact was inspected and contains genuine Room-generated version 1 and version 2 JSON files (11,294 bytes and 24,356 bytes). The debug APK artifact was downloaded and passed ZIP integrity validation; size 23,376,442 bytes.
+
+At the last check, the Android emulator instrumentation step `:app:connectedDebugAndroidTest` remained in progress. Therefore the Room migration and Android instrumentation tests remain **PENDING / NOT VERIFIED**, not passed.
+
+A follow-up workflow change adds automatic committing of generated v1/v2 Room schemas to the repository, using the workflow token with contents-write permission. Follow-up run [42779517052](https://github.com/yaskong543-del/autoposter-android-1-/actions/runs/42779517052) must be checked to confirm this commit actually succeeded.
+
+Supabase migrations against a live project, quota SQL smoke test, AI gateway deployment/authenticated request, physical-phone install/smoke test, and release signing remain not done. They require external owner credentials, device access, or keystore material.
