@@ -94,3 +94,14 @@ The latest complete workflow, [run 42827817986](https://github.com/yaskong543-de
 Room instrumentation is now genuinely verified: the result XML reports 9 tests, 0 failures, 0 errors, and 0 skipped. In particular, `migrate1To2KeepsPostsAndAddsTables` passed, proving the actual Room 1→2 migration preserves existing posts and creates the expected new tables. Run #42 had these tests pass but its diagnostics publishing step hit a sanitizer false positive on generated `stableIds.txt`; the filter was corrected, and run #43 is fully green.
 
 Remaining owner-side v0.7 verification: apply/check Supabase migration 003 and quota smoke SQL in the live project; deploy and make an authenticated AI gateway request using owner-managed secrets; install and smoke-test on a physical Android phone; configure release signing with the owner's keystore. Never put private credentials in chat. Keep v0.8/v1.0 work out of this v0.7 handoff.
+
+
+
+## Supabase access update — 2026-11-10
+The user reports that Claude is now connected to the user's Supabase project. Claude may therefore be able to perform the previously pending live-project checks directly, subject to the permissions granted in that connection:
+1. Inspect the linked project and confirm migrations 001, 002, and 003 are applied in order; do not reapply already-applied migrations.
+2. Run `supabase/tests/003_ai_quota_smoke.sql` using an authorized SQL execution path and capture the exact result.
+3. Verify the Edge Function deployment and make an authenticated AI gateway smoke request with a test account. Do not expose or copy private provider secrets into chat, GitHub, or client code.
+4. Record evidence and any failures here and in `PROJECT_STATUS.md`. Do not claim live verification based only on a successful local test or deployment command.
+
+This connection is Claude's; it does not automatically grant this ChatGPT session direct Supabase project access. The user still needs to have Claude execute and report the live checks unless a Supabase connector is separately connected here.
