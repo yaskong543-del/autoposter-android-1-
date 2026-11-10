@@ -18,7 +18,7 @@ jobs:
           mkdir -p /tmp/autoposter-handoff
           unzip -q AutoPoster_v0_7_handoff.zip -d /tmp/autoposter-handoff
           test -d /tmp/autoposter-handoff/AutoPoster
-          rsync -a --exclude='.git' /tmp/autoposter-handoff/AutoPoster/ ./
+          rsync -a --exclude='.git' --exclude='.github/workflows/***' /tmp/autoposter-handoff/AutoPoster/ ./
       - name: Commit extracted source
         run: |
           git config user.name "github-actions[bot]"
