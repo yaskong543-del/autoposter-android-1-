@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-: "\${GITHUB_RUN_ID:?GITHUB_RUN_ID is required}"
-: "\${GITHUB_SHA:?GITHUB_SHA is required}"
-: "\${GITHUB_RUN_NUMBER:?GITHUB_RUN_NUMBER is required}"
+: "${GITHUB_RUN_ID:?GITHUB_RUN_ID is required}"
+: "${GITHUB_SHA:?GITHUB_SHA is required}"
+: "${GITHUB_RUN_NUMBER:?GITHUB_RUN_NUMBER is required}"
 
 source_dir="app/build/diagnostics"
 tmp_dir="$(mktemp -d)"
@@ -29,7 +29,7 @@ cp -a "$tmp_dir/diagnostics/." "$run_dir/"
   printf 'run_id=%s\n' "$GITHUB_RUN_ID"
   printf 'run_number=%s\n' "$GITHUB_RUN_NUMBER"
   printf 'commit=%s\n' "$GITHUB_SHA"
-  printf 'run_url=%s\n' "\${GITHUB_SERVER_URL}/\${GITHUB_REPOSITORY}/actions/runs/\${GITHUB_RUN_ID}"
+  printf 'run_url=%s\n' "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 } > "$run_dir/run-info.txt"
 
 # Keep only the ten most recent run IDs.
