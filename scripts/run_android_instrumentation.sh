@@ -22,10 +22,7 @@ while IFS= read -r -d '' report; do
   cp --parents "$report" app/build/diagnostics/test-results/
 done < <(find app/build -type f \( -name '*.xml' -o -name '*.txt' \) -size -2M -print0)
 
-test_count=0
-if [[ -d app/build/test-results/connected ]]; then
-  test_count=$(grep -Rho '<testcase\b' app/build/test-results/connected --include='*.xml' 2>/dev/null | wc -l || true)
-fi
+test_count=$(find app/build -type f -name '*.xml' ! -path '*/diagnostics/*' -print0 | xargs -0 -r grep -hEo '<testcase([[:space:]>])' 2>/dev/null | wc -l || true)
 printf 'gradle_exit_code=%s\nexecuted_test_cases=%s\n' "$gradle_status" "$test_count" > app/build/diagnostics/result-summary.txt
 
 if [[ "$gradle_status" -ne 0 ]]; then
