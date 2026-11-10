@@ -40,6 +40,12 @@ jobs:
         run: gradle :app:testDebugUnitTest --stacktrace
       - name: Assemble debug APK and instrumentation APK
         run: gradle :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
+      - name: Upload Room schema exports
+        uses: actions/upload-artifact@v4
+        with:
+          name: autoposter-v0.7-room-schemas
+          path: app/schemas/**/*.json
+          if-no-files-found: error
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
