@@ -45,14 +45,6 @@ jobs:
         run: gradle :app:testDebugUnitTest --stacktrace
       - name: Assemble debug APK and instrumentation APK
         run: gradle :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
-      - name: Run Room migration and database instrumentation tests
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 35
-          target: google_apis
-          arch: x86_64
-          profile: pixel_6
-          script: gradle :app:connectedDebugAndroidTest --stacktrace
       - name: Upload Room schema exports
         uses: actions/upload-artifact@v4
         with:
@@ -71,6 +63,28 @@ jobs:
           name: autoposter-v0.7-android-test-apk
           path: app/build/outputs/apk/androidTest/debug/*.apk
           if-no-files-found: warn
+      - name: Run Room migration and database instrumentation tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          emulator-options: -no-window -no-snapshot -noaudio -gpu swiftshader_indirect
+          script: |
+            adb logcat -c
+            gradle :app:connectedDebugAndroidTest --stacktrace || {
+              mkdir -p app/build/diagnostics
+              adb logcat -d -v threadtime > app/build/diagnostics/room-instrumentation-logcat.txt
+              exit 1
+            }
+      - name: Upload instrumentation diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: autoposter-v0.7-instrumentation-diagnostics
+          path: app/build/diagnostics/
+          if-no-files-found: ignore
 
   ai-gateway:
     name: AI gateway tests and static checks
