@@ -87,3 +87,12 @@ Supabase migrations against a live project, quota SQL smoke test, AI gateway dep
 - **AI gateway tests: PASS — 29/29.** Migration SQL static check and provider-secret scan also pass.
 - **Room instrumentation: NOT VERIFIED.** Run [42787161149](https://github.com/yaskong543-del/autoposter-android-1-/actions/runs/42787161149) crashed in the emulator instrumentation process before any of 15 tests completed. The downloaded logcat showed no app-level fatal exception. A subsequent workflow run [42809071028](https://github.com/yaskong543-del/autoposter-android-1-/actions/runs/42809071028) uses API 30 Google ATD; its outcome is pending at the time of this update.
 - **Supabase live migration/quota smoke test, deployed authenticated AI request, physical-device smoke test, and release signing: NOT DONE** for the external-access/device/keystore reasons already documented.
+
+
+
+## Final CI verification — 2026-11-10
+- **Full CI workflow: PASS.** [Run 42827817986](https://github.com/yaskong543-del/autoposter-android-1-/actions/runs/42827817986) completed successfully; all three jobs passed (Android unit tests/debug build, AI gateway tests/static checks, Room migration instrumentation).
+- **Room instrumentation: PASS — 9/9.** Test XML records 9 tests, 0 failures, 0 errors, 0 skipped. The real `migrate1To2KeepsPostsAndAddsTables` migration test passed, including preservation of existing posts and verification of new tables.
+- Run #42's test execution had already succeeded; only diagnostics publishing failed because generated `stableIds.txt` was falsely classified by the sanitizer. The diagnostics filter fix is verified by the fully successful run #43.
+- **Not done / requires owner action:** live Supabase migration 003 and quota smoke test; authenticated AI gateway deployment/request with private owner credentials; physical-phone installation/smoke test; signed release build with owner keystore.
+- No v0.8 or v1.0 implementation was performed as part of this v0.7 stabilization.
