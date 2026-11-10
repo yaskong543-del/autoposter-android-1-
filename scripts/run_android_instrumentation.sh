@@ -24,9 +24,9 @@ done < <(find app/build -type f \( -name '*.xml' -o -name '*.txt' \) -size -2M -
 
 test_count=0
 if [[ -d app/build/test-results/connected ]]; then
-  test_count=$(grep -Rho '<testcase\\b' app/build/test-results/connected --include='*.xml' 2>/dev/null | wc -l || true)
+  test_count=$(grep -Rho '<testcase\b' app/build/test-results/connected --include='*.xml' 2>/dev/null | wc -l || true)
 fi
-printf 'gradle_exit_code=%s\\nexecuted_test_cases=%s\\n' "$gradle_status" "$test_count" > app/build/diagnostics/result-summary.txt
+printf 'gradle_exit_code=%s\nexecuted_test_cases=%s\n' "$gradle_status" "$test_count" > app/build/diagnostics/result-summary.txt
 
 if [[ "$gradle_status" -ne 0 ]]; then
   exit "$gradle_status"
