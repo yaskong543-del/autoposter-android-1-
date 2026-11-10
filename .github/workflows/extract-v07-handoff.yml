@@ -1,0 +1,32 @@
+name: Extract AutoPoster v0.7 handoff
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Extract project source
+        run: |
+          test -f AutoPoster_v0_7_handoff.zip
+          mkdir -p /tmp/autoposter-handoff
+          unzip -q AutoPoster_v0_7_handoff.zip -d /tmp/autoposter-handoff
+          test -d /tmp/autoposter-handoff/AutoPoster
+          rsync -a --exclude='.git' /tmp/autoposter-handoff/AutoPoster/ ./
+      - name: Commit extracted source
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No source changes to commit."
+          else
+            git commit -m "Add extracted AutoPoster v0.7 source"
+            git push
+          fi
