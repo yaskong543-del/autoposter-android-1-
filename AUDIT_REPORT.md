@@ -16,13 +16,19 @@ Inspected the complete v0.7 archive inventory and read `PROJECT_STATUS.md` and `
 | Room migration static check | **PASS** | `python scripts/check_migration_sql.py` — 10 additive statements |
 | Provider-secret scan | **PASS** | `bash scripts/check_no_ai_keys.sh` |
 | Android string resources | **PASS** | 471 Kotlin `R.string` references; all exist in both EN and HI resources |
+| Android Kotlin compilation + JVM unit tests | **PASS** | GitHub Actions run 42759348402; `gradle :app:testDebugUnitTest --stacktrace` |
+| Debug APK + instrumentation APK compilation | **PASS** | `gradle :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace`; both artifacts uploaded |
+| Google Sign-In compile fix | **PASS** | Replaced invalid `TYPE_GOOGLE_ID_TOKEN` with `TYPE_GOOGLE_ID_TOKEN_CREDENTIAL` |
 | Source archive integrity | **PASS** | Original v0.7 ZIP (148 entries) and audited ZIP (149 entries) extracted successfully |
 
 ## Audit changes already present in this package
 
 1. `.github/workflows/build.yml` explicitly runs both TypeScript `.test.ts` files using Node's `--experimental-strip-types` flag. The prior plain `node --test` invocation could report success while discovering zero tests in the Node 22.16 environment.
 2. `supabase/README.md` documents the same explicit test command.
-3. `PROJECT_STATUS.md` records the static checks and outstanding verification blockers.
+3. `PROJECT_STATUS.md` and `CLAUDE_HANDOFF_V0_7.md` record the actual successful CI results and remaining blockers.
+4. Fixed the Google ID token credential constant after the first CI compile identified the invalid reference.
+5. Corrected Android SDK setup in CI; Android SDK 36 and Gradle 8.13 now install successfully.
+6. Added a Room schema artifact upload step to CI so KSP exports can be retrieved and inspected.
 
 ## Product limitations retained intentionally
 
@@ -37,13 +43,16 @@ Inspected the complete v0.7 archive inventory and read `PROJECT_STATUS.md` and `
 
 | Check | Status | Reason |
 |---|---|---|
-| Android Gradle compile and JVM tests | **NOT RUN** | No Gradle executable or wrapper, Android SDK, or network access to provision them |
-| Room KSP schema export | **NOT RUN** | Requires actual Gradle/KSP build; `app/schemas` is absent |
-| Room 1→2 instrumentation migration test | **NOT RUN** | Requires genuine Room-generated v1/v2 schema JSON and emulator/device |
-| Supabase migration 003 + quota smoke SQL | **NOT RUN** | No authorized Supabase project/database connection supplied |
-| AI gateway deployment / authenticated request | **NOT RUN** | No Supabase CLI/Deno, project credentials, or Anthropic API key supplied |
-| APK build / install | **NOT RUN** | No Android SDK, Gradle, or adb |
-| GitHub push / CI | **NOT RUN** | The connected GitHub integration does not currently expose `yaskong543-del/autoposter-android`; the owner has shown the repository is private and empty |
+| Room schema v1/v2 JSON committed and compared | **NOT DONE** | KSP runs in CI; schema artifact upload has been added for the next run. Genuine v0.6 schema v1 still needs export. |
+| Room 1→2 instrumentation migration test | **NOT RUN** | Requires genuine Room-generated v1/v2 schema JSON and an emulator/device |
+| Supabase migration 003 + quota smoke SQL | **NOT RUN** | No authorized Supabase project/database connection available |
+| AI gateway deployment / authenticated request | **NOT RUN** | Requires Supabase project configuration and Anthropic secret |
+| APK installation / device smoke test | **NOT RUN** | Requires a physical Android device or emulator |
+| Signed release APK | **NOT BUILT** | No release keystore/configuration available |
+
+Successful Android CI run: https://github.com/yaskong543-del/autoposter-android-1-/actions/runs/42759348402  
+Debug APK artifact: `autoposter-v0.7-debug-apk` (GitHub Actions artifact, expires 2027-02-08).  
+Instrumentation APK artifact: `autoposter-v0.7-android-test-apk`.
 
 The available environment has Java 21 and Node 22.16, but the Android project targets JDK 17 / Gradle 8.13 / Android SDK 36. There is no Gradle wrapper or Git history/remote in the supplied archive.
 
@@ -56,4 +65,4 @@ The available environment has Java 21 and Node 22.16, but the Android project ta
 5. Build and install the debug APK on a device/emulator. A release-signed APK additionally requires the owner's keystore and release configuration.
 6. Obtain the required YouTube, Meta/Instagram/Facebook, and TikTok platform approvals before representing publishing as production-ready.
 
-**No Android build, Room instrumentation, Supabase migration/deployment, authenticated production request, APK build, or device install is claimed as successful.**
+**Android Kotlin unit tests and both APK compilation tasks are now verified successful. Room migration instrumentation, Supabase deployment/live AI, and physical-device installation remain unverified.**
