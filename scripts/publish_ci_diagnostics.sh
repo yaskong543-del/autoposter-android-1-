@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-: "${GITHUB_RUN_ID:?GITHUB_RUN_ID is required}"
-: "${GITHUB_SHA:?GITHUB_SHA is required}"
-: "${GITHUB_RUN_NUMBER:?GITHUB_RUN_NUMBER is required}"
+: "\${GITHUB_RUN_ID:?GITHUB_RUN_ID is required}"
+: "\${GITHUB_SHA:?GITHUB_SHA is required}"
+: "\${GITHUB_RUN_NUMBER:?GITHUB_RUN_NUMBER is required}"
 
 source_dir="app/build/diagnostics"
 tmp_dir="$(mktemp -d)"
@@ -26,16 +26,16 @@ run_dir="runs/$GITHUB_RUN_ID"
 mkdir -p "$run_dir"
 cp -a "$tmp_dir/diagnostics/." "$run_dir/"
 {
-  printf 'run_id=%s\\n' "$GITHUB_RUN_ID"
-  printf 'run_number=%s\\n' "$GITHUB_RUN_NUMBER"
-  printf 'commit=%s\\n' "$GITHUB_SHA"
-  printf 'run_url=%s\\n' "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+  printf 'run_id=%s\n' "$GITHUB_RUN_ID"
+  printf 'run_number=%s\n' "$GITHUB_RUN_NUMBER"
+  printf 'commit=%s\n' "$GITHUB_SHA"
+  printf 'run_url=%s\n' "\${GITHUB_SERVER_URL}/\${GITHUB_REPOSITORY}/actions/runs/\${GITHUB_RUN_ID}"
 } > "$run_dir/run-info.txt"
 
 # Keep only the ten most recent run IDs.
 while IFS= read -r old_run; do
   [[ -n "$old_run" ]] && rm -rf "runs/$old_run"
-done < <(find runs -mindepth 1 -maxdepth 1 -type d -printf '%f\\n' | sort -rn | tail -n +11)
+done < <(find runs -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort -rn | tail -n +11)
 
 git add runs
 if git diff --cached --quiet; then
