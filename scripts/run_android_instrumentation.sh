@@ -16,11 +16,12 @@ timeout --signal=TERM --kill-after=60s 25m gradle --no-daemon :app:connectedDebu
 gradle_status=${PIPESTATUS[0]}
 set -e
 
-# Preserve small XML/text test reports for diagnosis.
+# Preserve only actual test-result XML files. Do not copy generated resource
+# metadata (for example stableIds.txt), which can resemble opaque credentials.
 mkdir -p app/build/diagnostics/test-results
 while IFS= read -r -d '' report; do
   cp --parents "$report" app/build/diagnostics/test-results/
-done < <(find app/build -type f \( -name '*.xml' -o -name '*.txt' \) -size -2M -print0)
+done < <(find app/build -type f -name '*.xml' -path '*/test-results/*' -size -2M -print0)
 
 test_count=$(find app/build -type f -name '*.xml' ! -path '*/diagnostics/*' -print0 | xargs -0 -r grep -hEo '<testcase([[:space:]>])' 2>/dev/null | wc -l || true)
 printf 'gradle_exit_code=%s\nexecuted_test_cases=%s\n' "$gradle_status" "$test_count" > app/build/diagnostics/result-summary.txt
