@@ -175,3 +175,12 @@ Still not completed: Supabase deployment/quota smoke/live authenticated AI reque
 - CI was changed to use an API 30 Google ATD emulator. The current verification run is [42809071028](https://github.com/yaskong543-del/autoposter-android-1-/actions/runs/42809071028); its outcome must be checked before updating this status.
 - Supabase live migration/quota smoke test, deployed authenticated AI request, physical-phone smoke test, and release signing remain **not done**. They require private project credentials/provider secret, the owner's phone interaction, or a release keystore respectively.
 - Scope remains v0.7 stabilization only. Do not begin v0.8/v1.0 here.
+
+
+
+## Final CI verification update — 2026-11-10
+- **Latest workflow run: PASS.** [Run 42827817986](https://github.com/yaskong543-del/autoposter-android-1-/actions/runs/42827817986) completed successfully with all three jobs green: Android unit tests/debug build, AI gateway tests/static checks, and Room migration instrumentation.
+- **Room instrumentation: PASS — 9/9 tests.** The downloaded test-result XML reports `tests=9 failures=0 errors=0 skipped=0`. The `migrate1To2KeepsPostsAndAddsTables` test passed, verifying the actual Room 1→2 migration preserves existing posts and creates the expected new tables.
+- Earlier run #42 had the instrumentation tests pass but failed afterward in diagnostics publishing due to a sanitizer false positive on generated `stableIds.txt` metadata. The diagnostics filter was corrected; run #43 verifies the complete workflow now succeeds.
+- **Still external/not done:** Supabase live migration 003 and quota smoke test; deployed authenticated AI request (requires owner-managed credentials); physical-phone install/smoke test; signed release APK (requires release keystore).
+- Scope remains v0.7 stabilization and handoff only. No v0.8/v1.0 implementation is included.
