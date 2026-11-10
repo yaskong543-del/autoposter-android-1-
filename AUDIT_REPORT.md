@@ -79,3 +79,11 @@ At the last check, the Android emulator instrumentation step `:app:connectedDebu
 A follow-up workflow change adds automatic committing of generated v1/v2 Room schemas to the repository, using the workflow token with contents-write permission. Follow-up run [42779517052](https://github.com/yaskong543-del/autoposter-android-1-/actions/runs/42779517052) must be checked to confirm this commit actually succeeded.
 
 Supabase migrations against a live project, quota SQL smoke test, AI gateway deployment/authenticated request, physical-phone install/smoke test, and release signing remain not done. They require external owner credentials, device access, or keystore material.
+
+
+## Latest stabilization update — 2026-11-10
+- **Room schema exports: PASS.** Genuine Room/KSP-generated schema v1 and v2 JSON files are committed under `app/schemas/com.example.autoposter.AppDatabase/`.
+- **Kotlin unit tests and APK assembly: PASS** in CI.
+- **AI gateway tests: PASS — 29/29.** Migration SQL static check and provider-secret scan also pass.
+- **Room instrumentation: NOT VERIFIED.** Run [42787161149](https://github.com/yaskong543-del/autoposter-android-1-/actions/runs/42787161149) crashed in the emulator instrumentation process before any of 15 tests completed. The downloaded logcat showed no app-level fatal exception. A subsequent workflow run [42809071028](https://github.com/yaskong543-del/autoposter-android-1-/actions/runs/42809071028) uses API 30 Google ATD; its outcome is pending at the time of this update.
+- **Supabase live migration/quota smoke test, deployed authenticated AI request, physical-device smoke test, and release signing: NOT DONE** for the external-access/device/keystore reasons already documented.
