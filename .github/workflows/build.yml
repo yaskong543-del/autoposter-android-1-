@@ -100,6 +100,9 @@ jobs:
           name: autoposter-v0.7-instrumentation-diagnostics
           path: app/build/diagnostics/
           if-no-files-found: ignore
+      - name: Publish sanitized diagnostics branch
+        if: always() && github.event_name != 'pull_request'
+        run: bash scripts/publish_ci_diagnostics.sh
 
   ai-gateway:
     name: AI gateway tests and static checks
