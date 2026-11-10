@@ -11,9 +11,21 @@
 ## Work already performed in this reviewed copy
 1. Inspected the complete v0.7 archive and read `PROJECT_STATUS.md` and `ARCHITECTURE.md`.
 2. Compared the v0.7 Room database source against the supplied v0.6 archive.
-3. Corrected `.github/workflows/build.yml` so the AI gateway `.test.ts` files are explicitly executed under Node 22 with `--experimental-strip-types`. Previously, plain `node --test` could exit successfully after discovering zero TypeScript tests.
-4. Updated `supabase/README.md` with the explicit gateway test command.
-5. Updated `PROJECT_STATUS.md` and added `AUDIT_REPORT.md` with actual checks and blockers.
+3. Corrected `.github/workflows/build.yml` so the AI gateway `.test.ts` files are explicitly executed under Node 22 with `--experimental-strip-types`.
+4. Corrected `GoogleSignIn.kt`: use `GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL` rather than the invalid `TYPE_GOOGLE_ID_TOKEN`. This was the compile failure from the first Android CI attempt.
+5. Fixed Android SDK setup in GitHub Actions and confirmed Gradle 8.13 / Android SDK 36 installation.
+6. Added a Room schema artifact upload step to CI so KSP-generated schema JSON can be retrieved and checked.
+7. Updated `PROJECT_STATUS.md` with the actual successful CI results and remaining blockers.
+
+## CI verification completed on 2026-11-10
+- Kotlin unit-test task: **passed** (`gradle :app:testDebugUnitTest --stacktrace`).
+- Android app Kotlin compilation: **passed**.
+- Debug APK: **built and uploaded** (`autoposter-v0.7-debug-apk`).
+- Instrumentation-test APK: **built and uploaded** (`autoposter-v0.7-android-test-apk`).
+- AI gateway tests: **29/29 passed**.
+- Migration static check and provider-secret scan: **passed**.
+- Successful run: https://github.com/yaskong543-del/autoposter-android-1-/actions/runs/42759348402
+- APK artifact retention expiry: 2027-02-08.
 
 ## Checks actually passed in the available environment
 - AI gateway unit tests: **29/29 passed**.
