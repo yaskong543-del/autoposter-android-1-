@@ -1,0 +1,54 @@
+# AutoPoster v0.7 — Handoff Notes
+
+**Scope boundary:** This handoff is for completing and stabilizing **v0.7 only**. Do not start v0.8 or v1.0 in this task. The user has explicitly assigned those later versions to Claude separately.
+
+## Source of truth
+- Authoritative source supplied by the user: `AutoPoster_AI_v0_7.zip`.
+- Preserve the existing v0.7 application and all working v0.6/v0.5 behavior. Do not rebuild from scratch or remove features to make the build pass.
+- `FEATURE_PRESERVATION_CHECKLIST.md` is the regression baseline. Re-check it before and after any code change.
+- The original uploaded ZIP remains the untouched backup. This handoff package contains the reviewed copy plus the audit and CI test-discovery fix.
+
+## Work already performed in this reviewed copy
+1. Inspected the complete v0.7 archive and read `PROJECT_STATUS.md` and `ARCHITECTURE.md`.
+2. Compared the v0.7 Room database source against the supplied v0.6 archive.
+3. Corrected `.github/workflows/build.yml` so the AI gateway `.test.ts` files are explicitly executed under Node 22 with `--experimental-strip-types`. Previously, plain `node --test` could exit successfully after discovering zero TypeScript tests.
+4. Updated `supabase/README.md` with the explicit gateway test command.
+5. Updated `PROJECT_STATUS.md` and added `AUDIT_REPORT.md` with actual checks and blockers.
+
+## Checks actually passed in the available environment
+- AI gateway unit tests: **29/29 passed**.
+- Room 1→2 migration static/repeatability check: passed (`python scripts/check_migration_sql.py`; 10 additive statements).
+- Provider secret scan: passed (`bash scripts/check_no_ai_keys.sh`).
+- Android string-resource reference check: 471 Kotlin references found in both English and Hindi resources.
+- Original and reviewed ZIP archives extracted successfully.
+
+These are not Android build or production deployment results.
+
+## Must be completed before calling v0.7 ready
+1. **Build and run Android tests in a network-enabled Android environment:** JDK 17, Gradle 8.13, Android SDK 36. Run:
+   - `gradle :app:testDebugUnitTest --stacktrace`
+   - `gradle :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace`
+   - `gradle :app:connectedDebugAndroidTest --stacktrace` on an emulator/device.
+   Fix only observed errors, preserving the feature checklist.
+2. **Generate real Room schema exports.** Build the v0.6 source with Room/KSP to export schema version 1, then build v0.7 to export version 2. Commit the generated JSON under `app/schemas/`; do not hand-author schema files. Run the actual 1→2 `MigrationTestHelper` instrumentation test.
+3. **Verify Supabase only with the owner's authorization.** Confirm whether migrations 001 and 002 are already applied. If not, apply 001, 002, then 003 in order. Run `supabase/tests/003_ai_quota_smoke.sql` and record its actual output.
+4. **Deploy and verify the AI gateway only with owner-provided configuration:** set `ANTHROPIC_API_KEY` as a Supabase secret, deploy `ai-gateway`, and make an authenticated request. Never put secrets in source control, Android resources, build logs, or chat.
+5. **Device smoke test:** install the debug APK and verify launch, sign-in/local mode, brand profile save, media import, draft save/edit, calendar, campaign review/queue, AI generation (once deployed), and existing publishing queue behavior. Record device/OS and outcomes.
+6. Keep platform restrictions honest. Image publishing is not implemented; social OAuth is not implemented (accounts use manually supplied tokens); platform publishing requires approvals and live tests. Do not represent these as production-ready.
+
+## Known blockers / user-provided items
+- No Gradle wrapper, Gradle executable, Android SDK, `adb`, emulator, Deno, or Supabase CLI was available in the prior execution environment; outbound network/DNS was unavailable.
+- No Supabase project authorization/configuration or Anthropic provider key was supplied. The owner must configure these privately; never ask them to paste secrets into chat.
+- No release keystore was supplied. A signed release APK cannot be produced without the owner's signing setup. A debug APK is a separate deliverable.
+- The private GitHub repository `yaskong543-del/autoposter-android` was not accessible through the connected GitHub integration (API returned 404). The user stated it is currently empty. Do not claim a push, commit, CI run, or repository upload happened.
+
+## Product limits to preserve and disclose
+- Images may be imported and included in drafts, but image publishing is not implemented.
+- Existing publishing behavior is inherited from v0.5 and remains subject to platform API approval and live integration tests.
+- Free AI quota: 5,000 tokens/month; premium plans: 500,000 tokens/month, subject to successful application of migration 003 and gateway deployment.
+- Hindi translations for the 201 new strings have not had native-speaker review.
+- Signing out clears local brand voices; unsynced edits may be lost.
+- `CalendarPage.kt` is unused but retained; `CalendarV2.kt` is active.
+
+## Reporting rule
+For every remaining task, report one of: **built and tested**, **built but untested**, **code only**, or **not done**. Include exact commands and results. Never infer that a feature works merely because source code exists or a workflow is configured.

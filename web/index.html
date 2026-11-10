@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AutoPoster Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0b0d14;--card:#151925;--chip:#22283a;--tx:#f3f2fa;--mu:#aeb2c4;--pr:#b7a5ff;--ac:#73dccb;--yt:#ff7b7b;--ig:#ff9ad5;--tt:#5eead4;--bad:#ff7a8a;--warn:#ffd27a;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:light){:root{--bg:#f4f3fb;--card:#fff;--chip:#e6e4f2;--tx:#1b1b28;--mu:#5d6074;--pr:#6b4fe0;--ac:#0a8f7c;color-scheme:light}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,sans-serif}
+.w{max-width:1100px;margin:0 auto;padding:16px}
+header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}header b{font-size:22px;font-weight:900}header small{color:var(--ac);letter-spacing:1.5px;font-size:10px;display:block}
+.g{flex:1}.card{background:var(--card);border-radius:20px;padding:16px}.grid{display:grid;gap:14px}
+.s4{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}.s2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.big{font-size:28px;font-weight:800}.mu{color:var(--mu);font-size:13px}h3{margin:0 0 10px;font-size:16px}
+button,input{font:inherit}button{border:0;border-radius:12px;padding:9px 14px;background:var(--pr);color:#21134b;font-weight:700;cursor:pointer}
+button.o{background:transparent;color:var(--tx);border:1px solid var(--chip)}
+input{background:transparent;color:var(--tx);border:1px solid var(--chip);border-radius:12px;padding:10px;width:100%}
+.chip{display:inline-block;background:var(--chip);border-radius:10px;padding:6px 11px;margin:0 6px 6px 0;cursor:pointer;font-weight:600;font-size:13px}.chip.on{background:var(--pr);color:#21134b}
+.pill{border-radius:50px;padding:2px 9px;font-size:11px;font-weight:700}
+.bar{height:7px;background:var(--chip);border-radius:7px;overflow:hidden}.bar i{display:block;height:100%}
+.row{display:flex;gap:10px;align-items:center}.item{padding:11px 0;border-top:1px solid var(--chip)}.item:first-child{border-top:0}
+.chart{display:flex;align-items:flex-end;gap:4px;height:110px}.chart i{flex:1;background:var(--ac);border-radius:5px 5px 2px 2px;min-height:3px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.cal div{background:var(--chip);border-radius:8px;min-height:42px;padding:4px;font-size:12px;cursor:pointer}.cal div.on{outline:2px solid var(--pr)}.cal b{color:var(--ac)}
+.hide{display:none}.login{max-width:380px;margin:8vh auto}.login .grid{gap:10px}
+</style></head><body><div class="w">
+<header><div><b>autoposter</b><small>CAMPAIGN DASHBOARD</small></div><span class="g"></span><span id="who" class="mu"></span><button class="o hide" id="out">Sign out</button></header>
+
+<div id="login" class="card login hide"><h3>Sign in</h3><div class="grid">
+<input id="em" type="email" placeholder="Email" autocomplete="username"><input id="pw" type="password" placeholder="Password (6+ characters)" autocomplete="current-password">
+<button id="si">Sign in</button><button class="o" id="su">Create account</button><button class="o" id="demo">Try with sample data</button>
+<div class="mu" id="msg">Use the same email and password as in the phone app's Cloud sync card.</div></div>
+<details class="mu" style="margin-top:12px"><summary>Connection settings</summary><div class="grid" style="margin-top:8px"><input id="cu" placeholder="Supabase project URL"><input id="ck" placeholder="Supabase publishable (anon) key"><button class="o" id="cs">Save</button></div></details></div>
+
+<main id="app" class="hide"><div class="grid s4" id="stats"></div><div style="height:14px"></div>
+<div class="grid s2"><div class="card"><h3>Published, last 14 days</h3><div id="chart"></div></div><div class="card"><h3>By platform</h3><div id="plat"></div></div></div><div style="height:14px"></div>
+<div class="grid s2"><div class="card"><h3>Progress by account</h3><div id="accs"></div></div><div class="card"><h3>YouTube performance</h3><div id="yt"></div></div></div><div style="height:14px"></div>
+<div class="card"><div class="row"><h3 class="g">Calendar</h3><button class="o" id="pm">‹</button><b id="mn"></b><button class="o" id="nm">›</button></div><div class="cal" id="cal"></div></div><div style="height:14px"></div>
+<div class="card"><h3>Queue</h3><div id="fl"></div><input id="sq" placeholder="Search clip, account or caption" style="margin-bottom:8px"><div id="list"></div></div></main>
+</div>
+<script>
+const CFG={url:"__SB_URL__",key:"__SB_KEY__"},$=s=>document.querySelector(s);
+const ST={QUEUED:["Scheduled","var(--pr)"],UPLOADING:["Uploading","var(--warn)"],DONE:["Published","var(--ac)"],FAILED:["Failed","var(--bad)"],NEEDS_AUTH:["Needs sign-in","#ffa36b"],CANCELED:["Canceled","var(--mu)"]};
+const PC={YOUTUBE:"var(--yt)",INSTAGRAM:"var(--ig)",TIKTOK:"var(--tt)"},PN={YOUTUBE:"YouTube",INSTAGRAM:"Instagram",TIKTOK:"TikTok"};
+let sb=null,rows=[],flt="ALL",q="",day=null,mon=new Date();mon.setDate(1);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pill=s=>`<span class="pill" style="background:color-mix(in srgb,${ST[s][1]} 18%,transparent);color:${ST[s][1]}">${ST[s][0]}</span>`;
+const fmt=d=>d?new Date(d).toLocaleString([],{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"";
+const k=n=>n<0?"–":n>=1e6?(n/1e6).toFixed(1)+"M":n>=1e4?Math.round(n/1e3)+"K":n;
+function cfg(){const u=localStorage.ap_url||CFG.url,key=localStorage.ap_key||CFG.key;return u&&key&&!u.startsWith("__")&&!key.startsWith("__")?{u,key}:null}
+function show(l){$("#login").classList.toggle("hide",!l);$("#app").classList.toggle("hide",l);$("#out").classList.toggle("hide",l||!sb)}
+async function boot(){const c=cfg();if(c){$("#cu").value=c.u;sb=supabase.createClient(c.u,c.key);const{data}=await sb.auth.getSession();if(data.session){$("#who").textContent=data.session.user.email;await load();sb.channel("pi").on("postgres_changes",{event:"*",schema:"public",table:"post_items"},load).subscribe();return}}show(true)}
+async function auth(up){const c=cfg();if(!c){$("#msg").textContent="Add the connection settings below first.";return}sb=sb||supabase.createClient(c.u,c.key);
+const a={email:$("#em").value.trim(),password:$("#pw").value};const r=up?await sb.auth.signUp(a):await sb.auth.signInWithPassword(a);
+if(r.error){$("#msg").textContent=r.error.message;return}if(up&&!r.data.session){$("#msg").textContent="Check your email to confirm the account, then sign in.";return}location.reload()}
+async function load(){const{data,error}=await sb.from("post_items").select("*").order("scheduled_at",{ascending:false}).limit(2000);if(error){$("#msg").textContent=error.message;show(true);return}rows=data;show(false);draw()}
+function demoMode(){const n=Date.now(),H=36e5,names=["beach_01","beach_02","dance_03","vlog_04","city_05","food_06","gym_07"],A=[["YOUTUBE","Main channel"],["INSTAGRAM","Reels page"],["TIKTOK","Dance clips"]];rows=[];let i=0;
+for(let d=13;d>=-3;d--)for(let j=0;j<(d%3)+1;j++){const a=A[i%3],t=n-d*24*H+j*H,done=d>0&&i%9!=4,f=d>0&&i%9==4;rows.push({id:"d"+i,platform:a[0],account_label:a[1],name:names[i%7]+".mp4",text:"Summer vibes #travel",scheduled_at:new Date(t).toISOString(),finished_at:done?new Date(t+6e4).toISOString():null,status:done?"DONE":f?"FAILED":"QUEUED",error:f?"Sign in again for this account":null,progress:0,views:done&&a[0]=="YOUTUBE"?(i*377)%5000+120:-1,likes:done&&a[0]=="YOUTUBE"?(i*31)%300:-1,comments:done&&a[0]=="YOUTUBE"?i%20:-1});i++}
+$("#who").textContent="sample data";show(false);draw()}
+function draw(){const by=s=>rows.filter(r=>r.status==s).length,done=by("DONE"),bad=by("FAILED")+by("NEEDS_AUTH"),rate=done+bad?Math.round(100*done/(done+bad))+"%":"–";
+$("#stats").innerHTML=[["Published",done,"var(--ac)"],["Success rate",rate,"var(--ac)"],["Scheduled",by("QUEUED")+by("UPLOADING"),"var(--pr)"],["Need attention",bad,bad?"var(--bad)":"var(--mu)"]].map(x=>`<div class="card"><div class="big" style="color:${x[2]}">${x[1]}</div><div class="mu">${x[0]}</div></div>`).join("");
+const days=[...Array(14)].map((_,i)=>{const s=new Date();s.setHours(0,0,0,0);s.setDate(s.getDate()-13+i);const e=new Date(s);e.setDate(e.getDate()+1);return[s,rows.filter(r=>r.status=="DONE"&&r.finished_at&&new Date(r.finished_at)>=s&&new Date(r.finished_at)<e).length]}),mx=Math.max(1,...days.map(d=>d[1]));
+$("#chart").innerHTML=`<div class="chart">${days.map(d=>`<i title="${d[1]}" style="height:${d[1]/mx*100}%;opacity:${d[1]?1:.25}"></i>`).join("")}</div><div class="row mu"><span class="g">${days[0][0].toLocaleDateString([],{day:"numeric",month:"short"})}</span><span>today</span></div>`;
+$("#plat").innerHTML=Object.keys(PN).map(p=>{const m=rows.filter(r=>r.platform==p),d=m.filter(r=>r.status=="DONE").length;return`<div class="row" style="margin:9px 0"><span style="width:90px;color:${PC[p]}">${PN[p]}</span><div class="bar g"><i style="width:${m.length?100*d/m.length:0}%;background:${PC[p]}"></i></div><span class="mu">${d}/${m.length}</span></div>`}).join("");
+const ga={};rows.forEach(r=>(ga[r.platform+"|"+r.account_label]??=[]).push(r));
+$("#accs").innerHTML=Object.entries(ga).map(([key,l])=>{const[p,n]=key.split("|"),d=l.filter(r=>r.status=="DONE").length,b=l.filter(r=>["FAILED","NEEDS_AUTH"].includes(r.status)).length;return`<div style="margin:10px 0"><div class="row"><b class="g" style="color:${PC[p]}">${esc(n)}</b><span class="mu">${d}/${l.length}${b?` · <span style="color:var(--bad)">${b} failed</span>`:""}</span></div><div class="bar"><i style="width:${100*d/l.length}%;background:${PC[p]}"></i></div></div>`}).join("")||'<span class="mu">No posts yet.</span>';
+const y=rows.filter(r=>r.platform=="YOUTUBE"&&r.views>=0);
+$("#yt").innerHTML=y.length?`<div class="row" style="gap:24px"><div><div class="big">${k(y.reduce((a,r)=>a+r.views,0))}</div><div class="mu">views</div></div><div><div class="big">${k(y.reduce((a,r)=>a+Math.max(0,r.likes),0))}</div><div class="mu">likes</div></div></div><h3 style="margin-top:12px">Top videos</h3>`+[...y].sort((a,b)=>b.views-a.views).slice(0,5).map(r=>`<div class="row item"><span class="g">${esc(r.name)}</span><span class="mu">${k(r.views)} views</span></div>`).join(""):'<span class="mu">Refresh YouTube stats in the phone app (Insights tab) to see views here.</span>';
+cal();list()}
+function cal(){const y=mon.getFullYear(),m=mon.getMonth(),off=(new Date(y,m,1).getDay()+6)%7,n=new Date(y,m+1,0).getDate(),c={};rows.forEach(r=>{if(!r.scheduled_at)return;const d=new Date(r.scheduled_at);if(d.getFullYear()==y&&d.getMonth()==m)c[d.getDate()]=(c[d.getDate()]||0)+1});
+$("#mn").textContent=mon.toLocaleDateString([],{month:"long",year:"numeric"});
+$("#cal").innerHTML=["M","T","W","T","F","S","S"].map(d=>`<span class="mu" style="text-align:center">${d}</span>`).join("")+"<span></span>".repeat(off)+[...Array(n)].map((_,i)=>`<div class="${day==i+1?"on":""}" data-d="${i+1}">${i+1}${c[i+1]?`<br><b>${c[i+1]}</b>`:""}</div>`).join("")}
+function list(){$("#fl").innerHTML=["ALL","QUEUED","UPLOADING","DONE","FAILED"].map(f=>`<span class="chip ${flt==f?"on":""}" data-f="${f}">${f=="ALL"?"All":ST[f][0]}</span>`).join("")+(day?`<span class="chip" data-d="0">Day ${day} ✕</span>`:"");
+const t=q.toLowerCase(),l=rows.filter(r=>(flt=="ALL"||r.status==flt||(flt=="FAILED"&&r.status=="NEEDS_AUTH"))&&(!day||(r.scheduled_at&&new Date(r.scheduled_at).getDate()==day&&new Date(r.scheduled_at).getMonth()==mon.getMonth()))&&(!t||[r.name,r.account_label,r.text].join(" ").toLowerCase().includes(t))).slice(0,200);
+$("#list").innerHTML=l.map(r=>`<div class="item"><div class="row"><b class="g" style="color:${PC[r.platform]}">${esc(r.name)}</b>${pill(r.status)}</div><div class="mu">${esc(r.account_label)} · ${fmt(r.scheduled_at)}</div>${r.status=="UPLOADING"?`<div class="bar"><i style="width:${Math.round(r.progress*100)}%;background:${PC[r.platform]}"></i></div>`:""}${r.error&&r.status!="DONE"?`<div class="mu" style="color:var(--bad)">${esc(r.error)}</div>`:""}</div>`).join("")||'<span class="mu">Nothing here.</span>'}
+document.addEventListener("click",e=>{const f=e.target.closest("[data-f]"),d=e.target.closest("[data-d]");if(f){flt=f.dataset.f;list()}else if(d&&d.closest("#cal")){day=day==+d.dataset.d?null:+d.dataset.d;cal();list()}else if(d){day=null;cal();list()}});
+$("#sq").oninput=e=>{q=e.target.value;list()};$("#pm").onclick=()=>{mon.setMonth(mon.getMonth()-1);day=null;cal();list()};$("#nm").onclick=()=>{mon.setMonth(mon.getMonth()+1);day=null;cal();list()};
+$("#si").onclick=()=>auth(false);$("#su").onclick=()=>auth(true);$("#demo").onclick=demoMode;$("#out").onclick=async()=>{await sb.auth.signOut();location.reload()};
+$("#cs").onclick=()=>{localStorage.ap_url=$("#cu").value.trim();localStorage.ap_key=$("#ck").value.trim();location.reload()};
+boot();
+</script></body></html>
