@@ -85,3 +85,12 @@ The genuine Room-generated v1/v2 schema JSON files are now committed under `app/
 Room instrumentation is still not verified: run [42787161149](https://github.com/yaskong543-del/autoposter-android-1-/actions/runs/42787161149) failed because the emulator instrumentation process crashed with 15 tests discovered and 0 completed. Captured logcat contained no app-level fatal exception. The workflow shell script was fixed, and the next attempt was moved to a lighter API 30 Google ATD image. Check run [42809071028](https://github.com/yaskong543-del/autoposter-android-1-/actions/runs/42809071028) before making further changes.
 
 Do not mark Room migration as passed unless the 1→2 MigrationTestHelper test and the database instrumentation tests actually complete successfully. Supabase live deployment, authenticated AI request, physical-device smoke test, and signed release remain external/not done.
+
+
+
+## Verified final CI result — 2026-11-10
+The latest complete workflow, [run 42827817986](https://github.com/yaskong543-del/autoposter-android-1-/actions/runs/42827817986), completed with **all three jobs successful**: Android unit tests/debug build, AI gateway tests/static checks, and Room migration instrumentation.
+
+Room instrumentation is now genuinely verified: the result XML reports 9 tests, 0 failures, 0 errors, and 0 skipped. In particular, `migrate1To2KeepsPostsAndAddsTables` passed, proving the actual Room 1→2 migration preserves existing posts and creates the expected new tables. Run #42 had these tests pass but its diagnostics publishing step hit a sanitizer false positive on generated `stableIds.txt`; the filter was corrected, and run #43 is fully green.
+
+Remaining owner-side v0.7 verification: apply/check Supabase migration 003 and quota smoke SQL in the live project; deploy and make an authenticated AI gateway request using owner-managed secrets; install and smoke-test on a physical Android phone; configure release signing with the owner's keystore. Never put private credentials in chat. Keep v0.8/v1.0 work out of this v0.7 handoff.
