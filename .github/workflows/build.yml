@@ -41,6 +41,10 @@ jobs:
           gradle -p tools/room-v1-export :legacy:assembleDebug --stacktrace
           mkdir -p app/schemas/com.example.autoposter.AppDatabase
           cp tools/room-v1-export/legacy/schemas/com.example.autoposter.AppDatabase/1.json app/schemas/com.example.autoposter.AppDatabase/1.json
+      - name: Run Kotlin unit tests
+        run: gradle :app:testDebugUnitTest --stacktrace
+      - name: Assemble debug APK and instrumentation APK
+        run: gradle :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
       - name: Commit generated Room schema exports
         run: |
           git config user.name "github-actions[bot]"
@@ -50,10 +54,6 @@ jobs:
             git commit -m "Add generated Room v0.6 and v0.7 schemas"
             git push
           fi
-      - name: Run Kotlin unit tests
-        run: gradle :app:testDebugUnitTest --stacktrace
-      - name: Assemble debug APK and instrumentation APK
-        run: gradle :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
       - name: Upload Room schema exports
         uses: actions/upload-artifact@v4
         with:
