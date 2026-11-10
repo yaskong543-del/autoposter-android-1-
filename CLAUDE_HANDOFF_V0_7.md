@@ -77,3 +77,11 @@ The emulator step `:app:connectedDebugAndroidTest` was still running at the last
 The CI workflow was further changed to automatically commit the generated Room schema files to `app/schemas/com.example.autoposter.AppDatabase/` when changed. Follow-up run [42779517052](https://github.com/yaskong543-del/autoposter-android-1-/actions/runs/42779517052) is responsible for validating that commit step; verify it before claiming schema files are committed.
 
 Remaining external steps: Supabase migration/deployment/quota smoke/live AI request require authorized Supabase project access and a privately configured Anthropic key; physical device smoke test requires installing on the owner's phone; release signing requires the owner's keystore. Do not start v0.8 or v1.0 as part of v0.7 stabilization.
+
+
+## Latest CI troubleshooting — 2026-11-10
+The genuine Room-generated v1/v2 schema JSON files are now committed under `app/schemas/com.example.autoposter.AppDatabase/`. Kotlin unit tests, both APK assembly tasks, AI gateway tests (29/29), migration static check, and provider-secret scan are green.
+
+Room instrumentation is still not verified: run [42787161149](https://github.com/yaskong543-del/autoposter-android-1-/actions/runs/42787161149) failed because the emulator instrumentation process crashed with 15 tests discovered and 0 completed. Captured logcat contained no app-level fatal exception. The workflow shell script was fixed, and the next attempt was moved to a lighter API 30 Google ATD image. Check run [42809071028](https://github.com/yaskong543-del/autoposter-android-1-/actions/runs/42809071028) before making further changes.
+
+Do not mark Room migration as passed unless the 1→2 MigrationTestHelper test and the database instrumentation tests actually complete successfully. Supabase live deployment, authenticated AI request, physical-device smoke test, and signed release remain external/not done.
