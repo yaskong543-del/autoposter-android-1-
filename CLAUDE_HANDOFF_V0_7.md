@@ -64,3 +64,16 @@ These are not Android build or production deployment results.
 
 ## Reporting rule
 For every remaining task, report one of: **built and tested**, **built but untested**, **code only**, or **not done**. Include exact commands and results. Never infer that a feature works merely because source code exists or a workflow is configured.
+
+
+---
+
+## Latest CI update — 2026-11-10 (supersedes stale verification statements above)
+
+Run [42778490167](https://github.com/yaskong543-del/autoposter-android-1-/actions/runs/42778490167): genuine v0.6 Room schema v1 generation passed; Kotlin unit tests passed; debug and instrumentation APK assembly passed; APK and schema artifacts uploaded; AI gateway tests, SQL migration static check, and provider-secret scan passed. The Room schema artifact was downloaded and inspected: it contains Room-generated `1.json` and `2.json` (11,294 and 24,356 bytes respectively).
+
+The emulator step `:app:connectedDebugAndroidTest` was still running at the last status check. It is **not yet a pass**. The newest debug APK from this run was downloaded and its ZIP integrity checked; it is a debug build, not a signed release.
+
+The CI workflow was further changed to automatically commit the generated Room schema files to `app/schemas/com.example.autoposter.AppDatabase/` when changed. Follow-up run [42779517052](https://github.com/yaskong543-del/autoposter-android-1-/actions/runs/42779517052) is responsible for validating that commit step; verify it before claiming schema files are committed.
+
+Remaining external steps: Supabase migration/deployment/quota smoke/live AI request require authorized Supabase project access and a privately configured Anthropic key; physical device smoke test requires installing on the owner's phone; release signing requires the owner's keystore. Do not start v0.8 or v1.0 as part of v0.7 stabilization.
