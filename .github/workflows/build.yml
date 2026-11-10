@@ -81,22 +81,7 @@ jobs:
           emulator-boot-timeout: 900
           emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -camera-back none -gpu swiftshader_indirect -memory 4096 -cores 2
           disable-animations: false
-          script: |
-            mkdir -p app/build/diagnostics
-            gradle --stop
-            adb kill-server || true
-            adb start-server
-            adb wait-for-device
-            for attempt in $(seq 1 30); do
-              if timeout 8s adb shell 'test "$(getprop sys.boot_completed)" = "1"' >/dev/null 2>&1; then
-                break
-              fi
-              sleep 2
-            done
-            timeout 15s adb shell getprop ro.build.version.sdk
-            adb logcat -c
-            trap 'adb logcat -d -v threadtime > app/build/diagnostics/room-instrumentation-logcat.txt' EXIT
-            gradle --no-daemon :app:connectedDebugAndroidTest --stacktrace
+          script: bash scripts/run_android_instrumentation.sh
       - name: Upload instrumentation diagnostics
         if: always()
         uses: actions/upload-artifact@v4
