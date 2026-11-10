@@ -1,0 +1,2 @@
+gradle_exit_code=0
+executed_test_cases=9
