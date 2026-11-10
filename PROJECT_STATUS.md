@@ -146,3 +146,23 @@ Next required actions:
 2. Build the v0.6 source with Room/KSP to export the real version-1 schema JSON, then build v0.7 to export version 2 and run instrumented migration tests.
 3. With owner-authorized Supabase credentials, apply migrations 001→002→003, run the quota smoke SQL, set the Anthropic secret, deploy `ai-gateway`, and verify a real authenticated request.
 4. Build and install the debug APK on an Android device/emulator. A signed release APK additionally requires the owner's signing key and release decision.
+
+
+---
+
+## Latest verification update — 2026-11-10 (authoritative over older notes above)
+
+GitHub Actions run [42778490167](https://github.com/yaskong543-del/autoposter-android-1-/actions/runs/42778490167), commit `7c9835d32aa0d9edf03f4a2b39b0dbcb418a8368`:
+
+- **Passed:** v0.6 Room schema v1 generation using the separate legacy Room/KSP exporter.
+- **Passed:** Kotlin unit tests (`:app:testDebugUnitTest`).
+- **Passed:** debug APK and instrumentation APK assembly.
+- **Passed:** upload of both APK artifacts and Room schema artifact.
+- **Passed:** AI gateway tests, migration static check, and provider-secret scan.
+- **Built and validated:** genuine Room schema JSON exports for database versions 1 and 2 are present in artifact `autoposter-v0.7-room-schemas`; the archive contains `1.json` (11,294 bytes) and `2.json` (24,356 bytes).
+- **In progress at last check:** emulator execution of `:app:connectedDebugAndroidTest`. Do not call the migration tests passed until the workflow reports success.
+- Latest debug APK artifact: `autoposter-v0.7-debug-apk` from run 42778490167; ZIP downloaded and APK integrity checked successfully (23,376,442 bytes).
+
+The CI workflow has now been updated to grant the workflow token contents-write permission and commit generated Room v1/v2 schema JSON to `app/schemas/com.example.autoposter.AppDatabase/` when changed. This follow-up workflow is run [42779517052](https://github.com/yaskong543-del/autoposter-android-1-/actions/runs/42779517052); its outcome and schema commit must be checked before claiming the JSON is committed.
+
+Still not completed: Supabase deployment/quota smoke/live authenticated AI request (requires owner-authorized project configuration and provider secret); physical phone installation/smoke test; release signing (requires owner's keystore). These are external configuration/device blockers, not tests that have passed.
