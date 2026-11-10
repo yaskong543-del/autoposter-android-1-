@@ -82,12 +82,10 @@ jobs:
           emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -camera-back none -gpu swiftshader_indirect
           disable-animations: true
           script: |
+            mkdir -p app/build/diagnostics
             adb logcat -c
-            gradle :app:connectedDebugAndroidTest --stacktrace || {
-              mkdir -p app/build/diagnostics
-              adb logcat -d -v threadtime > app/build/diagnostics/room-instrumentation-logcat.txt
-              exit 1
-            }
+            trap 'adb logcat -d -v threadtime > app/build/diagnostics/room-instrumentation-logcat.txt' EXIT
+            gradle :app:connectedDebugAndroidTest --stacktrace
       - name: Upload instrumentation diagnostics
         if: always()
         uses: actions/upload-artifact@v4
