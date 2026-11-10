@@ -32,7 +32,7 @@ class GoogleSignInHelper(private val webClientId: String) {
         val request = GetCredentialRequest.Builder().addCredentialOption(option).build()
         return try {
             val cred = CredentialManager.create(activityContext).getCredential(activityContext, request).credential
-            if (cred is CustomCredential && cred.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN)
+            if (cred is CustomCredential && cred.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL)
                 GoogleResult.Token(GoogleIdTokenCredential.createFrom(cred.data).idToken, raw)
             else GoogleResult.Failed
         } catch (e: GetCredentialCancellationException) { GoogleResult.Cancelled
