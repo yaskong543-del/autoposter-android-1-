@@ -79,8 +79,8 @@ jobs:
           target: google_apis
           arch: x86_64
           emulator-boot-timeout: 900
-          emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -camera-back none -gpu swiftshader_indirect -memory 2048 -cores 2
-          disable-animations: true
+          emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -camera-back none -gpu swiftshader_indirect -memory 4096 -cores 2
+          disable-animations: false
           script: |
             mkdir -p app/build/diagnostics
             gradle --stop
