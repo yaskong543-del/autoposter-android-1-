@@ -84,6 +84,8 @@ jobs:
           script: |
             mkdir -p app/build/diagnostics
             gradle --stop
+            adb kill-server || true
+            adb start-server
             adb wait-for-device
             for attempt in $(seq 1 30); do
               if timeout 8s adb shell 'test "$(getprop sys.boot_completed)" = "1"' >/dev/null 2>&1; then
