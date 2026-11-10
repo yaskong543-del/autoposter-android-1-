@@ -18,12 +18,12 @@ jobs:
           mkdir -p /tmp/autoposter-handoff
           unzip -q AutoPoster_v0_7_handoff.zip -d /tmp/autoposter-handoff
           test -d /tmp/autoposter-handoff/AutoPoster
-          rsync -a --exclude='.git' --exclude='.github/workflows/***' /tmp/autoposter-handoff/AutoPoster/ ./
+          rsync -a --exclude='.git' --exclude='.github' /tmp/autoposter-handoff/AutoPoster/ ./
       - name: Commit extracted source
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
+          git add -A -- . ':!.github/workflows/**'
           if git diff --cached --quiet; then
             echo "No source changes to commit."
           else
