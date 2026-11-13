@@ -1,0 +1,52 @@
+name: AutoPoster v0.8 APK
+on:
+  push:
+    branches: [v0.8-engine]
+    paths:
+      - incoming/AutoPoster_v0_8_audited.zip
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require uploaded v0.8 source archive
+        run: test -f incoming/AutoPoster_v0_8_audited.zip
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Extract v0.8 source
+        run: |
+          mkdir -p /tmp/autoposter-source
+          unzip -q incoming/AutoPoster_v0_8_audited.zip -d /tmp/autoposter-source
+          test -f /tmp/autoposter-source/AutoPoster/app/build.gradle.kts
+      - name: Verify v0.8 version metadata
+        working-directory: /tmp/autoposter-source/AutoPoster
+        run: |
+          grep -q 'versionCode = 8' app/build.gradle.kts
+          grep -q 'versionName = "0.8"' app/build.gradle.kts
+      - name: Run AI gateway tests
+        working-directory: /tmp/autoposter-source/AutoPoster
+        run: node --experimental-strip-types --test supabase/functions/ai-gateway/core.test.ts supabase/functions/ai-gateway/handler.test.ts
+      - name: Run Android unit tests
+        working-directory: /tmp/autoposter-source/AutoPoster
+        run: gradle :app:testDebugUnitTest --stacktrace
+      - name: Build debug APK
+        working-directory: /tmp/autoposter-source/AutoPoster
+        run: gradle :app:assembleDebug --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AutoPoster-v0.8-debug-APK
+          path: /tmp/autoposter-source/AutoPoster/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
