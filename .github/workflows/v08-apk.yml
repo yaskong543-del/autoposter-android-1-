@@ -377,37 +377,45 @@ jobs:
           # Free-plan defaults apply when fields are absent; explicit null still means unlimited.
           p = root / "app/src/main/java/com/example/autoposter/V08Policy.kt"
           lines = p.read_text().splitlines()
-          start = next(i for i, line in enumerate(lines) if line.strip() == "fun fromJson(o: JSONObject) = Entitlements(")
-          end = next(i for i in range(start + 1, len(lines)) if lines[i].strip() == ")")
-          lines[start:end+1] = [
-              "        fun fromJson(o: JSONObject): Entitlements {",
-              "            val plan = o.optString(\"plan\", \"free\")",
-              "            val freePlan = plan == \"free\"",
-              "            return Entitlements(",
-              "                plan = plan,",
-              "                maxProfiles = when {",
-              "                    !o.has(\"max_profiles\") -> if (freePlan) 2 else null",
-              "                    o.isNull(\"max_profiles\") -> null",
-              "                    else -> o.getInt(\"max_profiles\")",
-              "                },",
-              "                maxDevices = o.optInt(\"max_devices\", 1),",
-              "                aiTokensMonthly = o.optInt(\"ai_tokens_monthly\", 5_000),",
-              "                autoSync = o.optBoolean(\"auto_sync\", false),",
-              "                cellularUploads = o.optBoolean(\"cellular_uploads\", false),",
-              "                advancedAutomation = o.optBoolean(\"advanced_automation\", false),",
-              "                maxPendingJobs = when {",
-              "                    !o.has(\"max_pending_jobs\") -> if (freePlan) 10 else null",
-              "                    o.isNull(\"max_pending_jobs\") -> null",
-              "                    else -> o.getInt(\"max_pending_jobs\")",
-              "                }",
-              "            )",
-              "        }",
-          ]
+          start = next((i for i, line in enumerate(lines) if line.strip() == "fun fromJson(o: JSONObject) = Entitlements("), None)
+          if start is not None:
+              end = next(i for i in range(start + 1, len(lines)) if lines[i].strip() == ")")
+              lines[start:end+1] = [
+                  "        fun fromJson(o: JSONObject): Entitlements {",
+                  "            val plan = o.optString(\"plan\", \"free\")",
+                  "            val freePlan = plan == \"free\"",
+                  "            return Entitlements(",
+                  "                plan = plan,",
+                  "                maxProfiles = when {",
+                  "                    !o.has(\"max_profiles\") -> if (freePlan) 2 else null",
+                  "                    o.isNull(\"max_profiles\") -> null",
+                  "                    else -> o.getInt(\"max_profiles\")",
+                  "                },",
+                  "                maxDevices = o.optInt(\"max_devices\", 1),",
+                  "                aiTokensMonthly = o.optInt(\"ai_tokens_monthly\", 5_000),",
+                  "                autoSync = o.optBoolean(\"auto_sync\", false),",
+                  "                cellularUploads = o.optBoolean(\"cellular_uploads\", false),",
+                  "                advancedAutomation = o.optBoolean(\"advanced_automation\", false),",
+                  "                maxPendingJobs = when {",
+                  "                    !o.has(\"max_pending_jobs\") -> if (freePlan) 10 else null",
+                  "                    o.isNull(\"max_pending_jobs\") -> null",
+                  "                    else -> o.getInt(\"max_pending_jobs\")",
+                  "                }",
+                  "            )",
+                  "        }",
+              ]
+          else:
+              assert any(line.strip() == "fun fromJson(o: JSONObject): Entitlements {" for line in lines), "entitlement parser is neither original nor fixed"
           p.write_text(chr(10).join(lines) + chr(10))
 
           p = root / "app/src/test/java/com/example/autoposter/V08PolicyTest.kt"
-          s = p.read_text().replace('assertEquals("u1/post.mp4", Idempotency.storagePath("u1", "../../x/", "!!"))',
-                                   'assertEquals("u1/x.mp4", Idempotency.storagePath("u1", "../../x/", "!!"))')
+          s = p.read_text()
+          old = 'assertEquals("u1/post.mp4", Idempotency.storagePath("u1", "../../x/", "!!"))'
+          new = 'assertEquals("u1/x.mp4", Idempotency.storagePath("u1", "../../x/", "!!"))'
+          if old in s:
+              s = s.replace(old, new, 1)
+          else:
+              assert new in s, "storage path expectation is neither original nor fixed"
           p.write_text(s)
 
           p = root / "app/src/main/java/com/example/autoposter/GoogleSignIn.kt"
