@@ -30,3 +30,35 @@ Notes
 3. The app calls `POST {SUPABASE_URL}/functions/v1/ai-gateway` with the user's session token. Plans: `profiles.plan = 'free'` → 5,000 tokens/month, `'pro'` or `'agency'` → 500,000. Limits live in `public.ai_plan_limits`.
 4. Local checks: `cd supabase/functions/ai-gateway && node --experimental-strip-types --test core.test.ts handler.test.ts` (Node 22.16+).
 5. Usage and audit trail: `select * from ai_usage` / `ai_requests` (service role only; users can read their own `ai_usage` row).
+
+## v0.8 backend (Automation and Cloud Engine)
+
+Migration `004_v08_engine.sql` (after 001-003), Edge Functions `oauth`, `publish-worker`, `sync` (plus `ai-gateway` from v0.7).
+
+Deploy order and secrets (never paste secrets into chat; set them with the CLI or the dashboard):
+
+```
+supabase db push                                   # or run 004_v08_engine.sql in the SQL editor
+supabase secrets set TOKEN_ENC_KEY="k1:$(openssl rand -base64 32)"      # AES-256-GCM key for provider tokens; rotate by adding TOKEN_ENC_KEY_PREVIOUS
+supabase secrets set WORKER_SECRET="$(openssl rand -hex 32)"           # shared secret for the scheduler tick
+supabase secrets set OAUTH_RESULT_URL="autoposter://oauth"             # where the OAuth callback sends the user afterwards
+supabase secrets set YOUTUBE_CLIENT_ID=... YOUTUBE_CLIENT_SECRET=...   # only for providers you have approved apps for
+supabase functions deploy oauth --no-verify-jwt                        # callback is public; start/disconnect verify the JWT in code
+supabase functions deploy publish-worker --no-verify-jwt               # protected by WORKER_SECRET
+supabase functions deploy sync
+```
+
+Scheduler tick (every minute) with `pg_cron` + `pg_net` (enable both extensions; store the worker secret in Vault):
+
+```sql
+select cron.schedule('autoposter-tick', '* * * * *', $$
+  select net.http_post(url := 'https://<project-ref>.supabase.co/functions/v1/publish-worker',
+         headers := jsonb_build_object('authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'worker_secret')))
+$$);
+select cron.schedule('autoposter-maintenance', '*/15 * * * *', $$
+  select net.http_post(url := 'https://<project-ref>.supabase.co/functions/v1/publish-worker?maintenance=1',
+         headers := jsonb_build_object('authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'worker_secret')))
+$$);
+```
+
+Development premium override (server-side only, audited, expires): `select public.admin_set_plan('<user uuid>', 'pro', now() + interval '30 days', 'dev test');` — run from the SQL editor / service role. There is no client path to change a plan.

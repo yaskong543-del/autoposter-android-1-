@@ -1,9 +1,9 @@
-# AutoPoster AI — v0.7 (AI Creator Studio)
+# AutoPoster AI — v0.8 (Automation and Cloud Engine)
 
 See `PROJECT_STATUS.md` for what is genuinely functional, what still needs credentials, and what was not verified.
 See `ARCHITECTURE.md` for the layers. Backend setup: `supabase/README.md`. Config names: `.env.example`.
 
-**New in 0.7:** AI composer (server-side AI gateway, brand voice, token quotas), media library, month/week/day calendar, bulk campaign builder, dashboard. See PROJECT_STATUS.md for exactly what was and was not verified.
+**Baseline features from 0.7:** AI composer (server-side AI gateway, brand voice, token quotas), media library, month/week/day calendar, bulk campaign builder, dashboard. v0.8 adds the cloud automation engine; see PROJECT_STATUS.md and docs/V08_REPORT.md for exact verification status and known limitations.
 
 **New in 0.6:** premium Material 3 redesign (dark / light / system), five-tab navigation (Home, Create, Calendar, Queue, Insights) with a drawer for Accounts,
 Media library, Settings and Subscription, Supabase sign-up / sign-in / e-mail verification / Google / password reset / logout / session restore / account deletion,

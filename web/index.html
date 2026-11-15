@@ -35,12 +35,27 @@ input{background:transparent;color:var(--tx);border:1px solid var(--chip);border
 <div class="grid s2"><div class="card"><h3>Published, last 14 days</h3><div id="chart"></div></div><div class="card"><h3>By platform</h3><div id="plat"></div></div></div><div style="height:14px"></div>
 <div class="grid s2"><div class="card"><h3>Progress by account</h3><div id="accs"></div></div><div class="card"><h3>YouTube performance</h3><div id="yt"></div></div></div><div style="height:14px"></div>
 <div class="card"><div class="row"><h3 class="g">Calendar</h3><button class="o" id="pm">‹</button><b id="mn"></b><button class="o" id="nm">›</button></div><div class="cal" id="cal"></div></div><div style="height:14px"></div>
-<div class="card"><h3>Queue</h3><div id="fl"></div><input id="sq" placeholder="Search clip, account or caption" style="margin-bottom:8px"><div id="list"></div></div></main>
+<div class="card"><h3>Queue</h3><div id="fl"></div><input id="sq" placeholder="Search clip, account or caption" style="margin-bottom:8px"><div id="list"></div></div><section id="cloud" class="hide"><div style="height:14px"></div>
+<div id="cmsg" class="card mu" role="status" aria-live="polite" style="margin-bottom:14px">Cloud publishing</div>
+<div class="grid s2">
+<div class="card"><h3>Plan and limits</h3><div id="plan" class="mu">Loading…</div></div>
+<div class="card"><h3>Connected accounts</h3><div id="pacc" class="mu">Loading…</div><div id="pconn" style="margin-top:8px"></div></div></div>
+<div style="height:14px"></div>
+<div class="card"><h3>Schedule a video in the cloud</h3><div class="grid s2">
+<div class="grid" style="gap:8px"><select id="sa"></select><input id="sf" type="file" accept="video/mp4,video/quicktime,video/webm"><input id="sc" placeholder="Caption"><input id="sd" type="datetime-local"><button id="sg">Schedule</button></div>
+<div class="mu" id="sh">Uploads the video to your private cloud storage, then the server publishes it at (or shortly after) the chosen time in your browser's time zone. Publishing is not instant: the scheduler runs about once a minute and platforms may take longer to process. Only your own connected accounts can be used.</div></div></div>
+<div style="height:14px"></div>
+<div class="grid s2"><div class="card"><h3>Cloud publishing queue</h3><div id="jobs" class="mu">Loading…</div></div>
+<div class="card"><h3>Devices</h3><div id="devs" class="mu">Loading…</div></div></div>
+<div style="height:14px"></div>
+<div class="grid s2"><div class="card"><h3>Notifications</h3><div id="nprefs"></div><div id="notes" class="mu">Loading…</div></div>
+<div class="card"><h3>Sync conflicts</h3><div id="confl" class="mu">Loading…</div><h3 style="margin-top:16px">AI tools</h3><div class="mu">AI Creator Studio runs in the phone app in v0.8. The web dashboard shows your plan's monthly AI allowance above but does not yet generate content.</div></div></div>
+</section></main>
 </div>
 <script>
 const CFG={url:"__SB_URL__",key:"__SB_KEY__"},$=s=>document.querySelector(s);
 const ST={QUEUED:["Scheduled","var(--pr)"],UPLOADING:["Uploading","var(--warn)"],DONE:["Published","var(--ac)"],FAILED:["Failed","var(--bad)"],NEEDS_AUTH:["Needs sign-in","#ffa36b"],CANCELED:["Canceled","var(--mu)"]};
-const PC={YOUTUBE:"var(--yt)",INSTAGRAM:"var(--ig)",TIKTOK:"var(--tt)"},PN={YOUTUBE:"YouTube",INSTAGRAM:"Instagram",TIKTOK:"TikTok"};
+const PC={YOUTUBE:"var(--yt)",INSTAGRAM:"var(--ig)",TIKTOK:"var(--tt)",FACEBOOK:"#7aa7ff",THREADS:"var(--mu)",X:"var(--tx)",LINKEDIN:"#6cb4ff"},PN={YOUTUBE:"YouTube",INSTAGRAM:"Instagram",TIKTOK:"TikTok",FACEBOOK:"Facebook",THREADS:"Threads",X:"X",LINKEDIN:"LinkedIn"};
 let sb=null,rows=[],flt="ALL",q="",day=null,mon=new Date();mon.setDate(1);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const pill=s=>`<span class="pill" style="background:color-mix(in srgb,${ST[s][1]} 18%,transparent);color:${ST[s][1]}">${ST[s][0]}</span>`;
@@ -52,7 +67,7 @@ async function boot(){const c=cfg();if(c){$("#cu").value=c.u;sb=supabase.createC
 async function auth(up){const c=cfg();if(!c){$("#msg").textContent="Add the connection settings below first.";return}sb=sb||supabase.createClient(c.u,c.key);
 const a={email:$("#em").value.trim(),password:$("#pw").value};const r=up?await sb.auth.signUp(a):await sb.auth.signInWithPassword(a);
 if(r.error){$("#msg").textContent=r.error.message;return}if(up&&!r.data.session){$("#msg").textContent="Check your email to confirm the account, then sign in.";return}location.reload()}
-async function load(){const{data,error}=await sb.from("post_items").select("*").order("scheduled_at",{ascending:false}).limit(2000);if(error){$("#msg").textContent=error.message;show(true);return}rows=data;show(false);draw()}
+async function load(){const{data,error}=await sb.from("post_items").select("*").is("deleted_at",null).order("scheduled_at",{ascending:false}).limit(2000);if(error){$("#msg").textContent=error.message;show(true);return}rows=data;show(false);draw()}
 function demoMode(){const n=Date.now(),H=36e5,names=["beach_01","beach_02","dance_03","vlog_04","city_05","food_06","gym_07"],A=[["YOUTUBE","Main channel"],["INSTAGRAM","Reels page"],["TIKTOK","Dance clips"]];rows=[];let i=0;
 for(let d=13;d>=-3;d--)for(let j=0;j<(d%3)+1;j++){const a=A[i%3],t=n-d*24*H+j*H,done=d>0&&i%9!=4,f=d>0&&i%9==4;rows.push({id:"d"+i,platform:a[0],account_label:a[1],name:names[i%7]+".mp4",text:"Summer vibes #travel",scheduled_at:new Date(t).toISOString(),finished_at:done?new Date(t+6e4).toISOString():null,status:done?"DONE":f?"FAILED":"QUEUED",error:f?"Sign in again for this account":null,progress:0,views:done&&a[0]=="YOUTUBE"?(i*377)%5000+120:-1,likes:done&&a[0]=="YOUTUBE"?(i*31)%300:-1,comments:done&&a[0]=="YOUTUBE"?i%20:-1});i++}
 $("#who").textContent="sample data";show(false);draw()}
@@ -76,5 +91,63 @@ document.addEventListener("click",e=>{const f=e.target.closest("[data-f]"),d=e.t
 $("#sq").oninput=e=>{q=e.target.value;list()};$("#pm").onclick=()=>{mon.setMonth(mon.getMonth()-1);day=null;cal();list()};$("#nm").onclick=()=>{mon.setMonth(mon.getMonth()+1);day=null;cal();list()};
 $("#si").onclick=()=>auth(false);$("#su").onclick=()=>auth(true);$("#demo").onclick=demoMode;$("#out").onclick=async()=>{await sb.auth.signOut();location.reload()};
 $("#cs").onclick=()=>{localStorage.ap_url=$("#cu").value.trim();localStorage.ap_key=$("#ck").value.trim();location.reload()};
+
+/* ---- v0.8 cloud section: same session and RLS as the rest of the dashboard; no secrets, no service key ---- */
+const PLATS=["YOUTUBE","INSTAGRAM","TIKTOK","FACEBOOK","THREADS","X","LINKEDIN"],JST={scheduled:"Scheduled",due:"Waiting for worker",leased:"Starting",uploading:"Uploading",submitted:"Processing on platform",published:"Published",retryable_failure:"Retrying",permanent_failure:"Failed",cancelled:"Cancelled"};
+const NK={publish_success:"Post published",publish_failure:"Post failed",reminder:"Upcoming post reminder",token_expiring:"Connection expiring",account_error:"Account needs attention",sync_problem:"Sync problems"};
+let cinit=false,uid=null,accs=[];
+const cm=t=>{$("#cmsg").textContent=t};
+const jpill=s=>`<span class="pill" style="background:var(--chip)">${esc(JST[s]||s)}</span>`;
+const PLAN_ERR={PL001:"Your plan's connected-profile limit is reached.",PL002:"Your plan's device limit is reached.",PL005:"This account must be reconnected first.",PL006:"Invalid media path.",PL007:"Your plan's limit of scheduled cloud posts is reached.",PL008:"This post may already be live. Check the platform before retrying."};
+const errText=e=>PLAN_ERR[e&&e.code]||(e&&e.message)||"Something went wrong";
+async function cloudInit(){
+  if(cinit||!sb)return;const{data}=await sb.auth.getSession();if(!data.session)return;cinit=true;uid=data.session.user.id;$("#cloud").classList.remove("hide");
+  const q=new URLSearchParams(location.search);if(q.get("status")){cm(q.get("status")=="ok"?`${PN[q.get("platform")]||"Account"} connected.`:`Could not connect ${PN[q.get("platform")]||"the account"} (${esc(q.get("detail")||"error")}).`);history.replaceState(null,"",location.pathname)}
+  $("#sa").innerHTML="";cloudLoad();
+  sb.channel("ap-cloud").on("postgres_changes",{event:"*",schema:"public",table:"publish_jobs"},()=>loadJobs()).on("postgres_changes",{event:"*",schema:"public",table:"notifications"},()=>loadNotes()).subscribe();
+}
+async function cloudLoad(){await Promise.all([loadPlan(),loadAccounts(),loadJobs(),loadDevices(),loadNotes(),loadConflicts()])}
+async function loadPlan(){const{data,error}=await sb.rpc("my_entitlements");if(error){$("#plan").textContent=errText(error);return}const e=data;
+  $("#plan").innerHTML=`<div class="big">${esc(e.plan==="free"?"FREE":"PREMIUM")}</div><div class="mu">${e.expires_at?"until "+esc(new Date(e.expires_at).toLocaleDateString()):""}</div>
+  <div class="item">Profiles: <b>${e.profiles_used}</b> / ${e.max_profiles==null?"unlimited":e.max_profiles}</div><div class="item">Devices: <b>${e.devices_used}</b> / ${e.max_devices}</div>
+  <div class="item">AI tokens per month: <b>${Number(e.ai_tokens_monthly).toLocaleString()}</b></div><div class="item">Sync: ${e.auto_sync?"automatic":"manual / on open"} · Uploads: ${e.cellular_uploads?"Wi-Fi or cellular":"Wi-Fi only"}</div>
+  <div class="item">Pending cloud posts: ${e.max_pending_jobs==null?"unlimited":"up to "+e.max_pending_jobs}</div>`}
+async function loadAccounts(){const{data,error}=await sb.from("provider_accounts").select("id,platform,display_name,status,token_expires_at,blocked_until,last_error_code").order("created_at");if(error){$("#pacc").textContent=errText(error);return}
+  accs=(data||[]).filter(a=>a.status!=="REVOKED");
+  $("#pacc").innerHTML=accs.map(a=>`<div class="item"><div class="row"><b class="g" style="color:${PC[a.platform]}">${esc(PN[a.platform])} · ${esc(a.display_name||"")}</b><span class="pill" style="background:var(--chip)">${esc(a.status)}</span><button class="o" data-disc="${esc(a.id)}">Disconnect</button></div>
+  ${a.blocked_until&&new Date(a.blocked_until)>new Date()?`<div class="mu">Paused by platform limits until ${esc(fmt(a.blocked_until))}</div>`:""}${a.status==="NEEDS_RECONNECT"||a.status==="EXPIRED"?`<div class="mu" style="color:var(--bad)">Reconnect to keep publishing.</div>`:""}</div>`).join("")||"No cloud accounts connected yet.";
+  $("#pconn").innerHTML=PLATS.map(p=>`<span class="chip" data-conn="${p}">Connect ${esc(PN[p])}</span>`).join("");
+  $("#sa").innerHTML=accs.filter(a=>a.status==="CONNECTED"||a.status==="EXPIRING").map(a=>`<option value="${esc(a.id)}">${esc(PN[a.platform])} · ${esc(a.display_name||"")}</option>`).join("")||'<option value="">Connect an account first</option>'}
+async function loadJobs(){const{data,error}=await sb.from("publish_jobs").select("id,post_id,platform,status,run_at,attempts,max_attempts,remote_url,last_error_code,last_error_message").order("run_at",{ascending:false}).limit(50);if(error){$("#jobs").textContent=errText(error);return}
+  $("#jobs").innerHTML=(data||[]).map(j=>`<div class="item"><div class="row"><b class="g" style="color:${PC[j.platform]}">${esc(PN[j.platform])} · ${esc(fmt(j.run_at))}</b>${jpill(j.status)}</div>
+  ${j.last_error_message&&j.status!=="published"?`<div class="mu" style="color:var(--bad)">${esc(j.last_error_message)}</div>`:""}${j.remote_url&&/^https:\/\//.test(j.remote_url)?`<div class="mu"><a href="${esc(j.remote_url)}" target="_blank" rel="noopener noreferrer" style="color:var(--ac)">Open on platform</a></div>`:""}
+  <div class="row">${["scheduled","due","leased","uploading","retryable_failure"].includes(j.status)?`<button class="o" data-cj="${esc(j.id)}">Cancel</button>`:""}${["permanent_failure","cancelled"].includes(j.status)?`<button class="o" data-rj="${esc(j.id)}">Retry</button>`:""}</div></div>`).join("")||"No cloud posts yet."}
+async function loadDevices(){const{data,error}=await sb.from("devices").select("id,name,platform,app_version,last_seen_at,last_sync_at,revoked_at").order("last_seen_at",{ascending:false});if(error){$("#devs").textContent=errText(error);return}
+  $("#devs").innerHTML=(data||[]).map(d=>`<div class="item"><div class="row"><b class="g">${esc(d.name||d.platform)}</b>${d.revoked_at?'<span class="pill" style="background:var(--chip)">Removed</span>':`<button class="o" data-rd="${esc(d.id)}">Remove</button>`}</div>
+  <div class="mu">${esc(d.platform)} ${esc(d.app_version||"")} · last seen ${esc(fmt(d.last_seen_at))} · last sync ${d.last_sync_at?esc(fmt(d.last_sync_at)):"never"}</div></div>`).join("")||"No devices."}
+async function loadNotes(){const[n,p]=await Promise.all([sb.from("notifications").select("id,kind,title,body,created_at").order("created_at",{ascending:false}).limit(15),sb.from("notification_prefs").select("prefs").maybeSingle()]);
+  const pr=(p.data&&p.data.prefs)||{};$("#nprefs").innerHTML=Object.keys(NK).map(k=>`<label class="chip ${pr[k]===false?"":"on"}"><input type="checkbox" data-np="${k}" ${pr[k]===false?"":"checked"} style="display:none">${esc(NK[k])}</label>`).join("");
+  $("#notes").innerHTML=((n.data)||[]).map(x=>`<div class="item"><b>${esc(x.title)}</b><div class="mu">${esc(x.body)} · ${esc(fmt(x.created_at))}</div></div>`).join("")||"No notifications."}
+async function loadConflicts(){const{data,error}=await sb.from("sync_conflicts").select("id,entity,entity_id,kind,field,resolved_with,created_at").is("dismissed_at",null).order("created_at",{ascending:false}).limit(20);if(error){$("#confl").textContent=errText(error);return}
+  $("#confl").innerHTML=(data||[]).map(c=>`<div class="item"><div class="row"><b class="g">${esc(c.entity)} · ${esc(c.kind==="delete_vs_edit"?"deleted on one device, edited on another":"same field edited on two devices"+(c.field?": "+c.field:""))}</b><button class="o" data-dc="${esc(c.id)}">Dismiss</button></div>
+  <div class="mu">Kept: ${esc(c.resolved_with==="kept_record"?"the record (nothing was lost)":c.resolved_with==="client"?"the newer edit":"the version already on the server")} · ${esc(fmt(c.created_at))}</div></div>`).join("")||"No unresolved conflicts."}
+async function sha(t){return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t))),b=>b.toString(16).padStart(2,"0")).join("")}
+async function schedule(){const acc=$("#sa").value,f=$("#sf").files[0],when=$("#sd").value;if(!acc||!f||!when){cm("Choose an account, a video and a time.");return}
+  const at=new Date(when);if(isNaN(at)){cm("Invalid time.");return}const post=crypto.randomUUID(),ext=(f.name.split(".").pop()||"mp4").toLowerCase().replace(/[^a-z0-9]/g,"").slice(0,5)||"mp4",path=`${uid}/${post}.${ext}`;
+  cm("Uploading…");const up=await sb.storage.from("publish-media").upload(path,f,{upsert:true,contentType:f.type||"video/mp4"});if(up.error){cm("Upload failed: "+up.error.message+" (the project's storage size limit may be smaller than this video).");return}
+  const{error}=await sb.rpc("enqueue_publish_job",{p_post_id:post,p_account_id:acc,p_run_at:at.toISOString(),p_tz:Intl.DateTimeFormat().resolvedOptions().timeZone,p_payload:{caption:$("#sc").value.slice(0,2000)},p_media_path:path,p_idem:await sha(`v1|${uid}|${post}|${acc}`)});
+  if(error){await sb.storage.from("publish-media").remove([path]);cm(errText(error));return}cm("Scheduled. It will publish shortly after the chosen time.");$("#sf").value="";loadJobs();loadPlan()}
+document.addEventListener("click",async e=>{const t=e.target.closest("[data-conn],[data-disc],[data-cj],[data-rj],[data-rd],[data-dc]");if(!t||!sb)return;const d=t.dataset;
+  if(d.conn){cm("Opening "+PN[d.conn]+"…");const{data,error}=await sb.functions.invoke("oauth/start",{body:{platform:d.conn}});if(error||!data||!data.url){cm("This platform is not set up on the server yet, or you reached your plan's profile limit.");return}
+    const u=new URL(data.url);if(u.protocol!=="https:"){cm("Unexpected link from the server.");return}window.open(u.toString(),"_blank","noopener,noreferrer")}
+  else if(d.disc){if(!confirm("Disconnect this account? Scheduled posts for it will not publish."))return;const{error}=await sb.functions.invoke("oauth/disconnect",{body:{accountId:d.disc}});cm(error?"Could not disconnect.":"Disconnected.");loadAccounts();loadPlan()}
+  else if(d.cj){const{data,error}=await sb.rpc("cancel_publish_job",{p_job:d.cj});cm(error?errText(error):({cancelled:"Cancelled.",cancel_requested:"Cancel requested; it stops before the platform accepts the video.",too_late:"Too late: the platform already has this post. Remove it on the platform.",already_final:"Already finished."})[data]||"Done.");loadJobs()}
+  else if(d.rj){const{error}=await sb.rpc("retry_publish_job",{p_job:d.rj});cm(error?errText(error):"Scheduled again.");loadJobs()}
+  else if(d.rd){if(!confirm("Remove this device? It will be signed out."))return;const{data,error}=await sb.rpc("revoke_device",{p_device:d.rd});cm(error?errText(error):data?"Device removed and signed out.":"Nothing to remove.");loadDevices();loadPlan()}
+  else if(d.dc){await sb.from("sync_conflicts").update({dismissed_at:new Date().toISOString()}).eq("id",d.dc);loadConflicts()}});
+document.addEventListener("change",async e=>{const k=e.target.dataset&&e.target.dataset.np;if(!k||!sb)return;const{data}=await sb.from("notification_prefs").select("prefs").maybeSingle();const pr=Object.assign({},data&&data.prefs);pr[k]=e.target.checked;
+  const{error}=await sb.from("notification_prefs").upsert({owner:uid,prefs:pr,updated_at:new Date().toISOString()});cm(error?errText(error):"Notification preference saved.");loadNotes()});
+$("#sg").onclick=schedule;
+const _draw=draw;draw=function(){_draw();cloudInit()};
 boot();
 </script></body></html>
