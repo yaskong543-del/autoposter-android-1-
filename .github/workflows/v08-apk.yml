@@ -425,7 +425,7 @@ jobs:
           EOF
       - name: Publish source tree and refreshed archive
         run: |
-          cp -a /tmp/autoposter-publish/AutoPoster/. "${GITHUB_WORKSPACE}/"
+          rsync -a --exclude='.github/workflows/' /tmp/autoposter-publish/AutoPoster/ "${GITHUB_WORKSPACE}/"
           rm -f "${GITHUB_WORKSPACE}/${SOURCE_ARCHIVE}"
           (cd /tmp/autoposter-publish && zip -qr "${GITHUB_WORKSPACE}/${SOURCE_ARCHIVE}" AutoPoster)
           git config user.name "github-actions[bot]"
