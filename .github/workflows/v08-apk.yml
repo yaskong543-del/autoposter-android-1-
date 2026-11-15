@@ -168,7 +168,11 @@ jobs:
                   "    end if;",
                   "  end if;",
               ]
-          p.write_text("\\n".join(lines) + "\\n")
+          order_line = "alter table public.provider_accounts alter column created_at set default clock_timestamp();"
+          if order_line not in lines:
+              idx = next(i for i, line in enumerate(lines) if "create table if not exists public.oauth_states" in line)
+              lines.insert(idx, order_line)
+          p.write_text(chr(10).join(lines) + chr(10))
           PY
       - name: Install PostgreSQL client
         run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
