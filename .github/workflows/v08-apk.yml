@@ -88,7 +88,7 @@ jobs:
           assert i is not None or any("Object.values(acc).includes('A1')" in line for line in lines), "OAuth ciphertext assertion not found"
           if i is not None:
               lines[i] = "  assert.equal(acc.external_id, 'UC1'); assert.ok(!Object.values(acc).includes('A1') && !Object.hasOwn(acc, 'access_token') && !Object.hasOwn(acc, 'refresh_token') && acc.access_token_enc.startsWith('v1.'));"
-          p.write_text("\\n".join(lines) + "\\n")
+          p.write_text(chr(10).join(lines) + chr(10))
           PY
       - name: Run all Edge Function unit tests
         working-directory: /tmp/autoposter-source/AutoPoster
