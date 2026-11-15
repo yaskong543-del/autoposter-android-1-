@@ -177,6 +177,16 @@ jobs:
           cd /tmp/autoposter-source/AutoPoster
           pwd
           test -s supabase/migrations/004_v08_engine.sql
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("supabase/migrations/004_v08_engine.sql")
+          raw = p.read_bytes()
+          raw = raw.replace(bytes([13, 10]), bytes([10])).replace(bytes([13]), bytes([10]))
+          raw = raw.replace(bytes([92, 110]), bytes([10]))
+          p.write_bytes(raw)
+          print("migration LF count:", raw.count(bytes([10])))
+          PY
+          wc -l supabase/migrations/004_v08_engine.sql
           grep -n "create table if not exists public.provider_accounts" supabase/migrations/004_v08_engine.sql
           psql -v ON_ERROR_STOP=1 -q -f /tmp/autoposter-source/AutoPoster/supabase/tests/shim/supabase_shim.sql
           for f in 001_post_items 002_foundation 003_ai_creator_studio 004_v08_engine; do
