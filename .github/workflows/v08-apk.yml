@@ -151,43 +151,6 @@ jobs:
           p.write_text(s)
           print("migration chars:", len(s), "lines:", len(s.splitlines()), "remaining escaped:", s.count(escaped_newline))
           PY
-      - name: Diagnose scheduled-job promotion assertion
-        working-directory: /tmp/autoposter-source/AutoPoster
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path("supabase/tests/004_v08_smoke.sql")
-          lines = p.read_text().splitlines()
-          old = "  assert public.promote_due_jobs() >= 1 and (select status from public.publish_jobs where id = j) = 'due', 'promoted to due when its time came';"
-          new = [
-              "  n := public.promote_due_jobs();",
-              "  raise notice 'DEBUG promote=% status=% run_at=% now=%', n, (select status from public.publish_jobs where id = j), (select run_at from public.publish_jobs where id = j), now();",
-              "  assert n >= 1 and (select status from public.publish_jobs where id = j) = 'due', 'promoted to due when its time came';",
-          ]
-          if old in lines:
-              lines[lines.index(old):lines.index(old)+1] = new
-          elif not any("DEBUG promote=" in line for line in lines):
-              raise SystemExit("scheduled-job promotion assertion not found")
-          p.write_text(chr(10).join(lines) + chr(10))
-          p = Path("supabase/tests/004_v08_smoke.sql")
-          lines = p.read_text().splitlines()
-          old_claim = "  perform public.promote_due_jobs(); perform * from public.claim_publish_jobs('crash', 10, 60);"
-          new_claim = [
-              "  perform public.promote_due_jobs(); perform * from public.claim_publish_jobs('crash', 10, 60);",
-              "  raise notice 'DEBUG j2 after claim status=% lease_owner=% lease_exp=% attempts=%', (select status from public.publish_jobs where id = j2), (select lease_owner from public.publish_jobs where id = j2), (select lease_expires_at from public.publish_jobs where id = j2), (select attempts from public.publish_jobs where id = j2);",
-          ]
-          if old_claim in lines:
-              lines[lines.index(old_claim):lines.index(old_claim)+1] = new_claim
-          old_recover = "  assert public.recover_stale_jobs() = 1 and (select status from public.publish_jobs where id = j2) = 'due' and (select attempts from public.publish_jobs where id = j2) = 1, 'stale lease -> due, attempts + 1';"
-          new_recover = [
-              "  n := public.recover_stale_jobs();",
-              "  raise notice 'DEBUG recovery=% status=% attempts=% lease=% max=%', n, (select status from public.publish_jobs where id = j2), (select attempts from public.publish_jobs where id = j2), (select lease_expires_at from public.publish_jobs where id = j2), (select max_attempts from public.publish_jobs where id = j2);",
-              "  assert n = 1 and (select status from public.publish_jobs where id = j2) = 'due' and (select attempts from public.publish_jobs where id = j2) = 1, 'stale lease -> due, attempts + 1';",
-          ]
-          if old_recover in lines:
-              lines[lines.index(old_recover):lines.index(old_recover)+1] = new_recover
-          p.write_text(chr(10).join(lines) + chr(10))
-          PY
       - name: Fix row-type-safe profile upsert guard before SQL validation
         working-directory: /tmp/autoposter-source/AutoPoster
         run: |
@@ -234,9 +197,6 @@ jobs:
             echo "== Applying ${f}"
             psql -v ON_ERROR_STOP=1 -q -f "/tmp/autoposter-source/AutoPoster/supabase/migrations/${f}.sql"
           done
-      - name: Confirm v0.8 schema objects exist before smoke tests
-        run: |
-          psql -Atc "select current_database(), current_user, coalesce(to_regclass('public.provider_accounts')::text, 'MISSING_PROVIDER_ACCOUNTS'), coalesce(to_regclass('public.publish_jobs')::text, 'MISSING_PUBLISH_JOBS')"
       - name: Verify migration 004 is repeatable
         working-directory: /tmp/autoposter-source/AutoPoster
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/migrations/004_v08_engine.sql
@@ -253,7 +213,7 @@ jobs:
       - name: Verify SQL and TypeScript state machines agree
         working-directory: /tmp/autoposter-source/AutoPoster
         run: |
-          psql -X -f supabase/tests/dump_transitions.sql > /tmp/transitions.txt
+          psql -X -q -f supabase/tests/dump_transitions.sql > /tmp/transitions.txt
           node --experimental-strip-types scripts/check_transitions_sync.mjs /tmp/transitions.txt
       - name: Run parallel concurrency tests
         working-directory: /tmp/autoposter-source/AutoPoster
