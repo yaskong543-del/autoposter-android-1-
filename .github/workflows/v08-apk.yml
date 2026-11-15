@@ -146,9 +146,10 @@ jobs:
           p = Path("supabase/migrations/004_v08_engine.sql")
           s = p.read_text()
           escaped_newline = chr(92) + "n"
-          s = s.replace(escaped_newline, chr(10))
+          double_escaped_newline = chr(92) * 2 + "n"
+          s = s.replace(double_escaped_newline, chr(10)).replace(escaped_newline, chr(10))
           p.write_text(s)
-          print("migration line count:", len(s.splitlines()))
+          print("migration chars:", len(s), "lines:", len(s.splitlines()), "remaining escaped:", s.count(escaped_newline))
           PY
       - name: Fix row-type-safe profile upsert guard before SQL validation
         working-directory: /tmp/autoposter-source/AutoPoster
