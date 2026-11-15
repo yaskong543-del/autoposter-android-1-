@@ -124,25 +124,7 @@ jobs:
       - name: Fix row-type-safe profile upsert guard before SQL validation
         working-directory: /tmp/autoposter-source/AutoPoster
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path("supabase/migrations/004_v08_engine.sql")
-          s = p.read_text()
-          old = """  if tg_table_name = 'social_accounts' and exists (select 1 from public.social_accounts s where s.owner = new.owner and s.id = new.id) then
-    return new;                                   -- upsert of an existing row (v0.7 metadata mirror)
-  end if;
-"""
-          new = """  if tg_table_name = 'social_accounts' then
-    if exists (select 1 from public.social_accounts s where s.owner = new.owner and s.id = new.id) then
-      return new;                                 -- upsert of an existing row (v0.7 metadata mirror)
-    end if;
-  end if;
-"""
-          if old in s:
-              p.write_text(s.replace(old, new, 1))
-          elif new not in s:
-              raise SystemExit("Expected profile-limit trigger fragment was not found")
-          PY
+          python3 -c 'from pathlib import Path; p=Path("supabase/migrations/004_v08_engine.sql"); s=p.read_text(); old="  if tg_table_name = \'social_accounts\' and exists (select 1 from public.social_accounts s where s.owner = new.owner and s.id = new.id) then\\n    return new;                                   -- upsert of an existing row (v0.7 metadata mirror)\\n  end if;\\n"; new="  if tg_table_name = \'social_accounts\' then\\n    if exists (select 1 from public.social_accounts s where s.owner = new.owner and s.id = new.id) then\\n      return new;                                 -- upsert of an existing row (v0.7 metadata mirror)\\n    end if;\\n  end if;\\n"; assert old in s or new in s, "profile-limit trigger fragment not found"; p.write_text(s.replace(old,new,1))'
       - name: Install PostgreSQL client
         run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
       - name: Apply Supabase shim and migrations 001-004
