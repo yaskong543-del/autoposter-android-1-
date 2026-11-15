@@ -151,6 +151,29 @@ jobs:
           p.write_text(s)
           print("migration chars:", len(s), "lines:", len(s.splitlines()), "remaining escaped:", s.count(escaped_newline))
           PY
+      - name: Sequence SQL smoke side effects before assertions
+        working-directory: /tmp/autoposter-source/AutoPoster
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("supabase/tests/004_v08_smoke.sql")
+          lines = p.read_text().splitlines()
+          old_promote = "  assert public.promote_due_jobs() >= 1 and (select status from public.publish_jobs where id = j) = 'due', 'promoted to due when its time came';"
+          new_promote = [
+              "  n := public.promote_due_jobs();",
+              "  assert n >= 1 and (select status from public.publish_jobs where id = j) = 'due', 'promoted to due when its time came';",
+          ]
+          if old_promote in lines:
+              lines[lines.index(old_promote):lines.index(old_promote)+1] = new_promote
+          old_recover = "  assert public.recover_stale_jobs() = 1 and (select status from public.publish_jobs where id = j2) = 'due' and (select attempts from public.publish_jobs where id = j2) = 1, 'stale lease -> due, attempts + 1';"
+          new_recover = [
+              "  n := public.recover_stale_jobs();",
+              "  assert n = 1 and (select status from public.publish_jobs where id = j2) = 'due' and (select attempts from public.publish_jobs where id = j2) = 1, 'stale lease -> due, attempts + 1';",
+          ]
+          if old_recover in lines:
+              lines[lines.index(old_recover):lines.index(old_recover)+1] = new_recover
+          p.write_text(chr(10).join(lines) + chr(10))
+          PY
       - name: Fix row-type-safe profile upsert guard before SQL validation
         working-directory: /tmp/autoposter-source/AutoPoster
         run: |
