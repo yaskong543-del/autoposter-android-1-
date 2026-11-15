@@ -1,20 +1,30 @@
-name: AutoPoster v0.8 APK
+name: AutoPoster v0.8 verification
 on:
   push:
     branches: [v0.8-engine]
-    paths:
-      - incoming/AutoPoster_v0_8_audited.zip
+  pull_request:
+    branches: [main]
   workflow_dispatch:
+
 permissions:
   contents: read
+
+concurrency:
+  group: autoposter-v08-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SOURCE_ARCHIVE: AutoPoster_v0_8_audited(1).zip
+
 jobs:
   android:
+    name: Android unit tests and APK builds (v0.8 source)
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
-      - name: Require uploaded v0.8 source archive
-        run: test -f incoming/AutoPoster_v0_8_audited.zip
+      - name: Verify uploaded v0.8 source archive
+        run: test -f "${SOURCE_ARCHIVE}"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -23,30 +33,122 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.13'
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
       - name: Extract v0.8 source
         run: |
           mkdir -p /tmp/autoposter-source
-          unzip -q incoming/AutoPoster_v0_8_audited.zip -d /tmp/autoposter-source
+          unzip -q "${SOURCE_ARCHIVE}" -d /tmp/autoposter-source
           test -f /tmp/autoposter-source/AutoPoster/app/build.gradle.kts
       - name: Verify v0.8 version metadata
         working-directory: /tmp/autoposter-source/AutoPoster
         run: |
           grep -q 'versionCode = 8' app/build.gradle.kts
           grep -q 'versionName = "0.8"' app/build.gradle.kts
-      - name: Run AI gateway tests
-        working-directory: /tmp/autoposter-source/AutoPoster
-        run: node --experimental-strip-types --test supabase/functions/ai-gateway/core.test.ts supabase/functions/ai-gateway/handler.test.ts
-      - name: Run Android unit tests
+      - name: Run Kotlin unit tests
         working-directory: /tmp/autoposter-source/AutoPoster
         run: gradle :app:testDebugUnitTest --stacktrace
-      - name: Build debug APK
+      - name: Build debug and unsigned release APKs
         working-directory: /tmp/autoposter-source/AutoPoster
-        run: gradle :app:assembleDebug --stacktrace
+        run: gradle :app:assembleDebug :app:assembleRelease --stacktrace
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: AutoPoster-v0.8-test-reports
+          path: /tmp/autoposter-source/AutoPoster/app/build/reports/tests/
+          if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
         with:
           name: AutoPoster-v0.8-debug-APK
           path: /tmp/autoposter-source/AutoPoster/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AutoPoster-v0.8-unsigned-release-APK
+          path: /tmp/autoposter-source/AutoPoster/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+
+  backend:
+    name: Edge Function tests and security scans (v0.8 source)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Extract v0.8 source
+        run: unzip -q "${SOURCE_ARCHIVE}" -d /tmp/autoposter-source
+      - name: Run all Edge Function unit tests
+        working-directory: /tmp/autoposter-source/AutoPoster
+        run: |
+          node --experimental-strip-types --test \
+            supabase/functions/ai-gateway/core.test.ts supabase/functions/ai-gateway/handler.test.ts \
+            $(find supabase/functions -name '*.test.ts' -not -path '*/ai-gateway/*' | sort)
+      - name: Scan Android and web sources for provider secrets
+        working-directory: /tmp/autoposter-source/AutoPoster
+        run: bash scripts/check_no_web_secrets.sh
+      - name: Scan Android app for AI provider keys
+        working-directory: /tmp/autoposter-source/AutoPoster
+        run: bash scripts/check_no_ai_keys.sh
+      - name: Check migration SQL structure
+        working-directory: /tmp/autoposter-source/AutoPoster
+        run: python3 scripts/check_migration_sql.py
+
+  postgres:
+    name: Supabase migrations, RLS, smoke and concurrency (PostgreSQL 15)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Extract v0.8 source
+        run: unzip -q "${SOURCE_ARCHIVE}" -d /tmp/autoposter-source
+      - name: Install PostgreSQL client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+      - name: Apply Supabase shim and migrations 001-004
+        working-directory: /tmp/autoposter-source/AutoPoster
+        run: |
+          psql -v ON_ERROR_STOP=1 -q -f supabase/tests/shim/supabase_shim.sql
+          for f in 001_post_items 002_foundation 003_ai_creator_studio 004_v08_engine; do
+            echo "== Applying ${f}"
+            psql -v ON_ERROR_STOP=1 -q -f "supabase/migrations/${f}.sql"
+          done
+      - name: Verify migration 004 is repeatable
+        working-directory: /tmp/autoposter-source/AutoPoster
+        run: psql -v ON_ERROR_STOP=1 -q -f supabase/migrations/004_v08_engine.sql
+      - name: Run v0.7 AI quota smoke test
+        working-directory: /tmp/autoposter-source/AutoPoster
+        run: |
+          psql -v ON_ERROR_STOP=1 -f supabase/tests/003_ai_quota_smoke.sql 2>&1 | tee /tmp/003.log
+          grep -q "ai quota smoke test passed" /tmp/003.log
+      - name: Run v0.8 SQL smoke tests
+        working-directory: /tmp/autoposter-source/AutoPoster
+        run: |
+          psql -v ON_ERROR_STOP=1 -f supabase/tests/004_v08_smoke.sql 2>&1 | tee /tmp/004.log
+          grep -q "v0.8 smoke passed" /tmp/004.log
+      - name: Verify SQL and TypeScript state machines agree
+        working-directory: /tmp/autoposter-source/AutoPoster
+        run: |
+          psql -X -f supabase/tests/dump_transitions.sql > /tmp/transitions.txt
+          node --experimental-strip-types scripts/check_transitions_sync.mjs /tmp/transitions.txt
+      - name: Run parallel concurrency tests
+        working-directory: /tmp/autoposter-source/AutoPoster
+        run: bash supabase/tests/concurrency.sh
