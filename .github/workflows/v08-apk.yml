@@ -138,6 +138,17 @@ jobs:
           node-version: '22'
       - name: Extract v0.8 source
         run: unzip -q "${SOURCE_ARCHIVE}" -d /tmp/autoposter-source
+      - name: Restore escaped line breaks in v0.8 migration archive
+        working-directory: /tmp/autoposter-source/AutoPoster
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("supabase/migrations/004_v08_engine.sql")
+          s = p.read_text()
+          escaped_newline = chr(92) + "n"
+          if s.count(chr(10)) < 10 and escaped_newline in s:
+              p.write_text(s.replace(escaped_newline, chr(10)))
+          PY
       - name: Fix row-type-safe profile upsert guard before SQL validation
         working-directory: /tmp/autoposter-source/AutoPoster
         run: |
