@@ -160,12 +160,15 @@ jobs:
       - name: Install PostgreSQL client
         run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
       - name: Apply Supabase shim and migrations 001-004
-        working-directory: /tmp/autoposter-source/AutoPoster
         run: |
-          psql -v ON_ERROR_STOP=1 -q -f supabase/tests/shim/supabase_shim.sql
+          cd /tmp/autoposter-source/AutoPoster
+          pwd
+          test -s supabase/migrations/004_v08_engine.sql
+          grep -n "create table if not exists public.provider_accounts" supabase/migrations/004_v08_engine.sql
+          psql -v ON_ERROR_STOP=1 -q -f /tmp/autoposter-source/AutoPoster/supabase/tests/shim/supabase_shim.sql
           for f in 001_post_items 002_foundation 003_ai_creator_studio 004_v08_engine; do
             echo "== Applying ${f}"
-            psql -v ON_ERROR_STOP=1 -q -f "supabase/migrations/${f}.sql"
+            psql -v ON_ERROR_STOP=1 -q -f "/tmp/autoposter-source/AutoPoster/supabase/migrations/${f}.sql"
           done
       - name: Confirm v0.8 schema objects exist before smoke tests
         run: |
