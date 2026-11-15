@@ -151,6 +151,25 @@ jobs:
           p.write_text(s)
           print("migration chars:", len(s), "lines:", len(s.splitlines()), "remaining escaped:", s.count(escaped_newline))
           PY
+      - name: Diagnose scheduled-job promotion assertion
+        working-directory: /tmp/autoposter-source/AutoPoster
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("supabase/tests/004_v08_smoke.sql")
+          lines = p.read_text().splitlines()
+          old = "  assert public.promote_due_jobs() >= 1 and (select status from public.publish_jobs where id = j) = 'due', 'promoted to due when its time came';"
+          new = [
+              "  n := public.promote_due_jobs();",
+              "  raise notice 'DEBUG promote=% status=% run_at=% now=%', n, (select status from public.publish_jobs where id = j), (select run_at from public.publish_jobs where id = j), now();",
+              "  assert n >= 1 and (select status from public.publish_jobs where id = j) = 'due', 'promoted to due when its time came';",
+          ]
+          if old in lines:
+              lines[lines.index(old):lines.index(old)+1] = new
+          elif not any("DEBUG promote=" in line for line in lines):
+              raise SystemExit("scheduled-job promotion assertion not found")
+          p.write_text(chr(10).join(lines) + chr(10))
+          PY
       - name: Fix row-type-safe profile upsert guard before SQL validation
         working-directory: /tmp/autoposter-source/AutoPoster
         run: |
