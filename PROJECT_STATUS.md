@@ -1,34 +1,26 @@
 # HANDOFF SCOPE — READ FIRST
 
-This package is a **v0.7 stabilization handoff only**. The user has explicitly said to ignore v0.8 and v1.0 for this task; Claude will handle those later. Do not begin either version here. The supplied `AutoPoster_AI_v0_7.zip` is the source of truth. Preserve the existing application and use `FEATURE_PRESERVATION_CHECKLIST.md` as the regression baseline.
+This archive contains the **v0.7 AI Creator Studio baseline plus the v0.8 Automation and Cloud Engine changes**. Preserve all working v0.7 functionality. Treat `docs/V08_REPORT.md` as the authoritative v0.8 verification report and `FEATURE_PRESERVATION_CHECKLIST.md` as the regression baseline. v1.0 billing and Play Store work has not started.
 
-See `CLAUDE_HANDOFF_V0_7.md` for the exact remaining verification sequence, blockers, and user-provided requirements. See `AUDIT_REPORT.md` for checks actually run and their results.
+The v0.7 section below is retained as historical baseline documentation; it is not the current package version. Current Android version metadata is 0.8 (version code 8).
 
 ---
 
-# PROJECT STATUS — AutoPoster AI 0.7 (AI Creator Studio)
+# PROJECT STATUS — AutoPoster AI 0.8 (v0.7 baseline + Automation and Cloud Engine)
 
 ## Verification: read this first
-**CI verification on 2026-11-10 (commit `102497b3bf1be23cf743c52abbbe761fffecbea5`)**
-The first Android compile exposed an incorrect Google ID credential constant in `GoogleSignIn.kt`. It was corrected to `GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL`. The subsequent GitHub Actions run completed successfully.
+**Nothing in the Android app was compiled and no Android test was run.** The authoring environment had no Android SDK, Gradle, Kotlin compiler or
+network (same as v0.3–v0.6). Expect a handful of compile errors on the first `gradle assembleDebug`; CI will list them.
 
 | What | Status | How it was checked |
 |---|---|---|
-| Android Kotlin compilation | **Passed** | `gradle :app:testDebugUnitTest` compiled app + unit-test Kotlin sources successfully |
-| Kotlin JVM unit tests | **Passed** | `gradle :app:testDebugUnitTest --stacktrace` → BUILD SUCCESSFUL |
-| Debug APK | **Built** | `gradle :app:assembleDebug` succeeded; artifact `autoposter-v0.7-debug-apk` uploaded |
-| Instrumentation APK | **Built** | `gradle :app:assembleDebugAndroidTest` succeeded; artifact `autoposter-v0.7-android-test-apk` uploaded |
-| AI gateway tests | **Passed — 29/29** | Node 22: `node --experimental-strip-types --test supabase/functions/ai-gateway/core.test.ts supabase/functions/ai-gateway/handler.test.ts` |
-| SQL migration static check | **Passed** | `python scripts/check_migration_sql.py` |
-| Provider-secret scan | **Passed** | `bash scripts/check_no_ai_keys.sh` |
-| Room schema exports | **Not yet committed/verified** | KSP ran during build; archive generated schema files in CI and compare against v0.6 baseline next |
-| Room 1→2 instrumentation migration test | **Not run** | Requires genuine schema v1 and v2 JSON plus an emulator/device |
-| Supabase migration 003 + quota smoke SQL | **Not run** | Requires authorized project/database access |
-| AI gateway deployment / authenticated live request | **Not run** | Requires Supabase project configuration and Anthropic secret |
-| APK installation / device smoke test | **Not run** | Requires a physical Android device or emulator |
-| Signed release APK | **Not built** | No release keystore supplied; CI output is a debug APK |
-
-The successful CI run is [42759348402](https://github.com/yaskong543-del/autoposter-android-1-/actions/runs/42759348402). APK artifacts are retained by GitHub Actions until 2027-02-08.
+| AI gateway (`supabase/functions/ai-gateway`: validation, prompts, quota orchestration, errors) | **Built & tested** | `node --experimental-strip-types --test core.test.ts handler.test.ts` → 29 tests pass (the plain `node --test` command discovers zero tests in Node 22.16); `tsc --strict` on `core.ts` / `handler.ts` clean. `index.ts` (Deno wiring, provider call) was **not** run. |
+| SQL migration `003` + quota functions | **Code only** | Never executed (no Postgres here). `supabase/tests/003_ai_quota_smoke.sql` is written to prove it; **run it once** before trusting quotas. |
+| Room 1→2 migration SQL | **Partly checked** | `scripts/check_migration_sql.py`: 10 statements run twice on SQLite, existing data untouched, columns equal the 5 entities. Room's schema-hash validation (`MigrationTestHelper`) has **not** run. |
+| Android Kotlin (UI, repositories, logic) | **Code only** | Written and reviewed, never compiled. Script check: every `R.string.*` exists in EN and HI, format arguments match. |
+| Kotlin unit tests (55 new, `app/src/test`) | **Written, not run** | `AiGatewayTest` 12, `BrandRepositoryTest` 10, `MediaAndComposerTest` 12, `CampaignAndCalendarTest` 21 (planner, calendar/DST/reschedule, dashboard). |
+| Instrumented tests (5: `V07DatabaseTest` ×4, `AppMigrationTest`) | **Written, not run** | Need an emulator. `AppMigrationTest` also needs `app/schemas/.../1.json` (build the v0.6 tag once and commit it) and `2.json` (generated by building v0.7). |
+| Release APK | **Not built** | No SDK, no signing key here. CI builds the debug APK. |
 
 ## What v0.7 delivers
 1. **AI caption generator** — the Android app never holds a provider key. `AiGatewayClient` sends the signed-in user's JWT to the `ai-gateway` Edge Function, which holds the key (Supabase secret), authenticates, reserves tokens, calls the model, settles. Tasks: caption, 3 variations, hashtags, hooks, CTA, rewrite, shorten, grammar fix, translate, platform caption, YouTube title + description, video description. 7 tones, 18 languages. Output is clipped to each platform's limits on the server. `scripts/check_no_ai_keys.sh` (CI) and a unit test fail if a provider key/URL appears in the app.
@@ -150,37 +142,22 @@ Next required actions:
 
 ---
 
-## Latest verification update — 2026-11-10 (authoritative over older notes above)
+## v0.8 (Automation and Cloud Engine) - code complete, NOT yet verified by CI
 
-GitHub Actions run [42778490167](https://github.com/yaskong543-del/autoposter-android-1-/actions/runs/42778490167), commit `7c9835d32aa0d9edf03f4a2b39b0dbcb418a8368`:
+Status vocabulary: **Implemented** (code exists), **Automated-tested** (a test ran and passed), **Live-tested** (real provider/real Supabase), **Blocked**, **Not implemented**.
 
-- **Passed:** v0.6 Room schema v1 generation using the separate legacy Room/KSP exporter.
-- **Passed:** Kotlin unit tests (`:app:testDebugUnitTest`).
-- **Passed:** debug APK and instrumentation APK assembly.
-- **Passed:** upload of both APK artifacts and Room schema artifact.
-- **Passed:** AI gateway tests, migration static check, and provider-secret scan.
-- **Built and validated:** genuine Room schema JSON exports for database versions 1 and 2 are present in artifact `autoposter-v0.7-room-schemas`; the archive contains `1.json` (11,294 bytes) and `2.json` (24,356 bytes).
-- **In progress at last check:** emulator execution of `:app:connectedDebugAndroidTest`. Do not call the migration tests passed until the workflow reports success.
-- Latest debug APK artifact: `autoposter-v0.7-debug-apk` from run 42778490167; ZIP downloaded and APK integrity checked successfully (23,376,442 bytes).
+| Area | Implemented | Automated-tested (where) | Live-tested |
+|---|---|---|---|
+| 7 provider adapters (YouTube, Instagram, TikTok, Facebook, Threads, X, LinkedIn) | yes | mock `fetch` tests, Node (passed locally) | **no, all blocked on credentials/approvals** |
+| OAuth (state, PKCE, encrypted tokens, refresh, revoke) | yes | Node, passed locally | no |
+| Durable scheduler (jobs, leases, state machine, idempotency, backoff, cancellation, stale recovery) | yes (SQL + TS) | TS orchestration: Node, passed locally. SQL: tests written, **not run** (needs the new CI job) | no |
+| Entitlements FREE/PREMIUM, race-free limits, downgrade, expiry, dev override | yes (SQL) | SQL smoke + concurrency tests written, **not run** | no |
+| Cloud sync (outbox, tombstones, conflicts, revisions) | yes | server merge + endpoint logic: Node, passed locally; Kotlin client tests written, **not run** | no |
+| Device registration/revocation | yes (SQL RPC) | SQL tests written, **not run** | no |
+| Notifications (dedupe, prefs, delivery state) | yes | planner/dedupe Node + Kotlin; SQL **not run** | no |
+| Android workers (Upload, Retry, Notification, CloudSync) | yes | policy/engine/API Kotlin tests written, **not compiled or run** (no Android SDK in the authoring environment) | no |
+| Web dashboard cloud section | yes | script syntax-checked only, **not exercised in a browser** | no |
+| Android UI for connecting accounts / cloud queue | **not implemented** (web dashboard has it) | | |
+| TUS resumable phone upload; image publishing; LinkedIn organization pages; FCM push | **not implemented** | | |
 
-The CI workflow has now been updated to grant the workflow token contents-write permission and commit generated Room v1/v2 schema JSON to `app/schemas/com.example.autoposter.AppDatabase/` when changed. This follow-up workflow is run [42779517052](https://github.com/yaskong543-del/autoposter-android-1-/actions/runs/42779517052); its outcome and schema commit must be checked before claiming the JSON is committed.
-
-Still not completed: Supabase deployment/quota smoke/live authenticated AI request (requires owner-authorized project configuration and provider secret); physical phone installation/smoke test; release signing (requires owner's keystore). These are external configuration/device blockers, not tests that have passed.
-
-
-## Latest stabilization update — 2026-11-10 (authoritative)
-- Genuine Room schema v1 and v2 JSON files are now committed at `app/schemas/com.example.autoposter.AppDatabase/{1,2}.json`. Both were generated by Room/KSP in CI; they were not hand-authored.
-- Kotlin unit tests, debug APK assembly, Android test APK assembly, AI gateway tests (29/29), SQL static migration check, and provider-secret scan have passed in CI.
-- Room instrumentation has **not passed**. Run [42787161149](https://github.com/yaskong543-del/autoposter-android-1-/actions/runs/42787161149) built both APKs and ran the instrumentation task, but the emulator instrumentation process crashed before any of 15 tests completed. Captured logcat had no app-level fatal exception. This is an infrastructure/test-runner failure signal, not a migration pass or proof of an application defect.
-- CI was changed to use an API 30 Google ATD emulator. The current verification run is [42809071028](https://github.com/yaskong543-del/autoposter-android-1-/actions/runs/42809071028); its outcome must be checked before updating this status.
-- Supabase live migration/quota smoke test, deployed authenticated AI request, physical-phone smoke test, and release signing remain **not done**. They require private project credentials/provider secret, the owner's phone interaction, or a release keystore respectively.
-- Scope remains v0.7 stabilization only. Do not begin v0.8/v1.0 here.
-
-
-
-## Final CI verification update — 2026-11-10
-- **Latest workflow run: PASS.** [Run 42827817986](https://github.com/yaskong543-del/autoposter-android-1-/actions/runs/42827817986) completed successfully with all three jobs green: Android unit tests/debug build, AI gateway tests/static checks, and Room migration instrumentation.
-- **Room instrumentation: PASS — 9/9 tests.** The downloaded test-result XML reports `tests=9 failures=0 errors=0 skipped=0`. The `migrate1To2KeepsPostsAndAddsTables` test passed, verifying the actual Room 1→2 migration preserves existing posts and creates the expected new tables.
-- Earlier run #42 had the instrumentation tests pass but failed afterward in diagnostics publishing due to a sanitizer false positive on generated `stableIds.txt` metadata. The diagnostics filter was corrected; run #43 verifies the complete workflow now succeeds.
-- **Still external/not done:** Supabase live migration 003 and quota smoke test; deployed authenticated AI request (requires owner-managed credentials); physical-phone install/smoke test; signed release APK (requires release keystore).
-- Scope remains v0.7 stabilization and handoff only. No v0.8/v1.0 implementation is included.
+See `docs/V08_REPORT.md` for exact counts, evidence and the owner's checklist, and `docs/API_SUPPORT_MATRIX.md` for per-platform detail.

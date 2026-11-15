@@ -35,14 +35,27 @@ class AppContainer(val app: Application) {
     val ai by lazy { AiRepository(aiClient, db.aiUsage()) }
     val sync by lazy { SyncCoordinator(auth, profiles, devices, accountMeta, accountStore, brands) }
 
+    // v0.8 cloud engine
+    val cloudApi by lazy { CloudApi(http) { auth.accessToken() } }
+    val entitlements by lazy { EntitlementCache(app) }
+    val uploadQueue by lazy { UploadQueueStore(java.io.File(app.filesDir, "v08_upload_queue.json")) }
+    val syncOutbox by lazy { FileOutboxStore(java.io.File(app.filesDir, "v08_sync_outbox.json")) }
+    val syncState by lazy { FileSyncStateStore(java.io.File(app.filesDir, "v08_sync_state.json")) }
+    fun syncEngine(deviceId: String) = SyncEngine(
+        HttpSyncTransport(cloudApi), syncOutbox, syncState,
+        CompositeApplier(listOf(DraftApplier(db.drafts()), PostResultApplier { id, st, remoteId, err, finishedAt ->
+            PostStore.update(id) { it.copy(status = st, remoteId = remoteId ?: it.remoteId, error = err, finishedAt = if (finishedAt > 0) finishedAt else it.finishedAt) }
+        })), deviceId
+    )
+
     /** Restores the session and keeps user-scoped caches in step with sign-in / sign-out. */
     fun start() {
         appScope.launch { runCatching { auth.restore() }.onFailure { AppLog.e("App", "restore failed", it) } }
         appScope.launch {
             auth.state.collect { st ->
                 when (st) {
-                    is AuthState.SignedIn -> { runCatching { profiles.ensureLocal(st.session) }; SyncScheduler.kick(app) }
-                    AuthState.SignedOut -> runCatching { profiles.clearLocal(); devices.clearLocal(); accountMeta.clearLocal(); brands.clearLocal(); ai.clearLocal() }
+                    is AuthState.SignedIn -> { runCatching { profiles.ensureLocal(st.session) }; SyncScheduler.kick(app); runCatching { V08Scheduler.onSignedIn(app) } }
+                    AuthState.SignedOut -> runCatching { profiles.clearLocal(); devices.clearLocal(); accountMeta.clearLocal(); brands.clearLocal(); ai.clearLocal(); V08Scheduler.onSignedOut(app) }
                     else -> Unit
                 }
             }

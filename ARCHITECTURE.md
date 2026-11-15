@@ -45,3 +45,27 @@ Schemas export to `app/schemas/` at build time (commit them).
 
 ## Build
 compileSdk/targetSdk 36, minSdk 26, JDK 17, AGP 8.10.1, Kotlin 2.1.20 + Compose compiler plugin, KSP for Room. Release builds enable R8/resource shrinking.
+
+
+---
+
+## v0.8 additions
+
+```
+Phone (Android)                         Supabase                                   Platforms
+ UploadWorker --video--> Storage (private publish-media/<uid>/...)
+ UploadWorker --RPC enqueue_publish_job--> publish_jobs (RLS, no client writes)
+ CloudSyncWorker --/sync--> Edge Function sync --> post_items / sync_documents (rev, tombstones, conflicts)
+ NotificationWorker <-- notifications (deduped, prefs honoured)
+                                         pg_cron every minute --> Edge Function publish-worker
+                                           recover_stale_jobs -> promote_due_jobs -> claim_publish_jobs (FOR UPDATE SKIP LOCKED + lease)
+                                           provider adapter.advance()/status() -----------------------------> YouTube / Instagram / TikTok /
+                                           apply_job_transition (lease + legal transition) + audit event          Facebook / Threads / X / LinkedIn
+ Web dashboard --same JWT + RLS--> provider_accounts (metadata only), publish_jobs, devices, notifications, sync_conflicts
+ OAuth: Edge Function oauth (start / callback / disconnect); tokens AES-256-GCM encrypted, readable by no client.
+```
+
+Key decisions: the database is the source of truth for limits (advisory lock per owner, so concurrent requests cannot exceed a plan); the job state
+machine is enforced in SQL and mirrored in TypeScript (a CI step fails if they differ); clients never write job, token, plan, revocation or sync tables;
+publishing is at-most-once per provider (checkpoint before the non-repeatable call; ambiguity is reported, never retried blindly).
+Realistic latency: the worker starts a job at the first one-minute tick after `run_at` and large uploads/processing can take several ticks. No exact-time delivery is promised.

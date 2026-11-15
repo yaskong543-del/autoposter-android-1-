@@ -101,3 +101,13 @@ Rule for every future version: before merging, tick every item below as *still p
 | AI composer, brand voice, bulk campaign | New |
 | AI gateway + quota (Postgres) | New (SQL unexecuted, gateway tests pass) |
 | Auth, accounts, settings, queue, uploaders, scheduler | Unchanged |
+
+
+## v0.8 regression guards
+
+- [ ] v0.7 device registration upsert (`POST /rest/v1/devices?on_conflict=owner,install_id`) still works at the FREE device limit (`004_v08_smoke.sql` section 3).
+- [ ] v0.7 `social_accounts` metadata upsert still works at the FREE profile limit (section 1).
+- [ ] `profiles.plan` / `plan_expires_at` remain client-unwritable (section 2).
+- [ ] Existing `ai-gateway` quota flow unchanged (`003_ai_quota_smoke.sql` runs in the new CI job).
+- [ ] Room schema and migrations untouched (no entity changed; sync state/outbox/upload queue are plain files).
+- [ ] Legacy `CloudSync` dashboard feed (`post_items`) still written by the app; `rev`/`server_seq` are maintained by a trigger.
