@@ -43,6 +43,10 @@ jobs:
         run: |
           grep -q 'versionCode = 8' app/build.gradle.kts
           grep -q 'versionName = "0.8"' app/build.gradle.kts
+      - name: Fix Google ID credential type constant
+        working-directory: /tmp/autoposter-source/AutoPoster
+        run: |
+          sed -i 's/GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN)/GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL)/' app/src/main/java/com/example/autoposter/GoogleSignIn.kt
       - name: Run Kotlin unit tests
         working-directory: /tmp/autoposter-source/AutoPoster
         run: gradle :app:testDebugUnitTest --stacktrace
