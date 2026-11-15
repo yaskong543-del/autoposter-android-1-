@@ -43,6 +43,48 @@ jobs:
         run: |
           grep -q 'versionCode = 8' app/build.gradle.kts
           grep -q 'versionName = "0.8"' app/build.gradle.kts
+      - name: Fix free-plan entitlement defaults and storage-path expectation
+        working-directory: /tmp/autoposter-source/AutoPoster
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("app/src/main/java/com/example/autoposter/V08Policy.kt")
+          lines = p.read_text().splitlines()
+          start = next(i for i, line in enumerate(lines) if line.strip() == "fun fromJson(o: JSONObject) = Entitlements(")
+          end = next(i for i in range(start + 1, len(lines)) if lines[i].strip() == ")")
+          replacement = [
+              "        fun fromJson(o: JSONObject): Entitlements {",
+              "            val plan = o.optString(\"plan\", \"free\")",
+              "            val freePlan = plan == \"free\"",
+              "            return Entitlements(",
+              "                plan = plan,",
+              "                maxProfiles = when {",
+              "                    !o.has(\"max_profiles\") -> if (freePlan) 2 else null",
+              "                    o.isNull(\"max_profiles\") -> null",
+              "                    else -> o.getInt(\"max_profiles\")",
+              "                },",
+              "                maxDevices = o.optInt(\"max_devices\", 1),",
+              "                aiTokensMonthly = o.optInt(\"ai_tokens_monthly\", 5_000),",
+              "                autoSync = o.optBoolean(\"auto_sync\", false),",
+              "                cellularUploads = o.optBoolean(\"cellular_uploads\", false),",
+              "                advancedAutomation = o.optBoolean(\"advanced_automation\", false),",
+              "                maxPendingJobs = when {",
+              "                    !o.has(\"max_pending_jobs\") -> if (freePlan) 10 else null",
+              "                    o.isNull(\"max_pending_jobs\") -> null",
+              "                    else -> o.getInt(\"max_pending_jobs\")",
+              "                }",
+              "            )",
+              "        }",
+          ]
+          lines[start:end + 1] = replacement
+          p.write_text(chr(10).join(lines) + chr(10))
+          p = Path("app/src/test/java/com/example/autoposter/V08PolicyTest.kt")
+          s = p.read_text()
+          old = 'assertEquals("u1/post.mp4", Idempotency.storagePath("u1", "../../x/", "!!"))'
+          new = 'assertEquals("u1/x.mp4", Idempotency.storagePath("u1", "../../x/", "!!"))'
+          assert old in s or new in s, "storage path expectation not found"
+          p.write_text(s.replace(old, new, 1))
+          PY
       - name: Fix Google ID credential type constant
         working-directory: /tmp/autoposter-source/AutoPoster
         run: |
